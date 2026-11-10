@@ -3,9 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../models/brand.dart';
-import '../models/load_status.dart';
-import '../state/brand_list_notifier.dart';
+import '../utils/load_status.dart';
+import '../repositories/part_repository.dart';
+import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
+import '../widgets/entity_detail.dart';
 import '../widgets/load_state_view.dart';
 
 class BrandDetailScreen extends StatefulWidget {
@@ -21,6 +23,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
   LoadStatus _status = LoadStatus.loading;
   String? _error;
   Brand? _brand;
+  int _partsCount = 0;
 
   @override
   void initState() {
@@ -34,9 +37,13 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
       _error = null;
     });
     try {
-      final brand = await context.read<BrandListNotifier>().findById(widget.id);
+      final notifier = context.read<BrandListNotifier>();
+      final partRepo = context.read<PartRepository>();
+      final brand = await notifier.findById(widget.id);
+      final count = brand == null ? 0 : await partRepo.countByBrand(brand.id);
       setState(() {
         _brand = brand;
+        _partsCount = count;
         _status = brand == null ? LoadStatus.error : LoadStatus.success;
         _error = brand == null ? 'Бренд не найден' : null;
       });
@@ -48,17 +55,10 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
     }
   }
 
-  void _back() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go('/brands');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final brand = _brand;
+    final notifier = context.read<BrandListNotifier>();
     return LoadStateView(
       status: _status,
       error: _error,
@@ -68,52 +68,37 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
       onRetry: _load,
       child: brand == null
           ? const SizedBox.shrink()
-          : ListView(
-              padding: const EdgeInsets.all(24),
-              children: [
-                Row(
-                  children: [
-                    IconButton(onPressed: _back, icon: const Icon(Icons.arrow_back)),
-                    Expanded(
-                      child: Text(brand.name, style: Theme.of(context).textTheme.headlineSmall),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+          : EntityDetail(
+              title: brand.name,
+              fallbackPath: '/brands',
+              isDeleted: brand.isDeleted,
+              onEdit: () => context.go('/brands/${brand.id}/edit'),
+              canDelete: () async {
+                if (_partsCount == 0) return true;
+                await showInfo(
+                  context,
+                  'Удаление невозможно',
+                  'Бренд «${brand.name}» нельзя удалить: на него ссылаются $_partsCount запчастей.',
+                );
+                return false;
+              },
+              onRestored: () async {
+                await notifier.restore(brand.id);
+                await _load();
+              },
+              onDeleted: (hard) async {
+                if (hard) {
+                  await notifier.hardDelete(brand.id);
+                  if (context.mounted) context.go('/brands');
+                } else {
+                  await notifier.softDelete(brand.id);
+                  await _load();
+                }
+              },
+              fields: [
                 ListTile(title: const Text('Страна'), subtitle: Text(brand.country)),
                 ListTile(title: const Text('Год основания'), subtitle: Text('${brand.foundedYear}')),
-                if (brand.isDeleted) const ListTile(title: Text('Статус'), subtitle: Text('удалено')),
-                const SizedBox(height: 16),
-                if (brand.isDeleted)
-                  FilledButton.icon(
-                    onPressed: () async {
-                      final notifier = context.read<BrandListNotifier>();
-                      final ok = await confirmRestore(context, brand.name);
-                      if (!ok || !mounted) return;
-                      await notifier.restore(brand.id);
-                      await _load();
-                    },
-                    icon: const Icon(Icons.restore),
-                    label: const Text('Восстановить'),
-                  )
-                else
-                  FilledButton.tonalIcon(
-                    onPressed: () async {
-                      final notifier = context.read<BrandListNotifier>();
-                      final router = GoRouter.of(context);
-                      final choice = await confirmDelete(context, '«${brand.name}» будет удалён.');
-                      if (!mounted) return;
-                      if (choice == DeleteChoice.soft) {
-                        await notifier.softDelete(brand.id);
-                        await _load();
-                      } else if (choice == DeleteChoice.hard) {
-                        await notifier.hardDelete(brand.id);
-                        router.go('/brands');
-                      }
-                    },
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Удалить'),
-                  ),
+                ListTile(title: const Text('Связанные запчасти'), subtitle: Text('$_partsCount')),
               ],
             ),
     );

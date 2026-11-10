@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 class TableColumnSpec<T> {
@@ -57,78 +59,155 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final columns = <DataColumn>[
-      for (final spec in widget.columns)
-        DataColumn(
-          label: Text(spec.label),
-          numeric: spec.numeric,
-          onSort: spec.sortField == null || widget.onSort == null
-              ? null
-              : (_, __) => widget.onSort!(spec.sortField!),
-        ),
-      if (widget.actions != null) const DataColumn(label: Text('Действия')),
-    ];
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final headingStyle = theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600);
+    final showCheckbox = widget.onToggleSelect != null;
+    final showActions = widget.actions != null;
+    final columnCount =
+        (showCheckbox ? 1 : 0) + widget.columns.length + (showActions ? 1 : 0);
 
-    int? sortIndex;
-    for (var i = 0; i < widget.columns.length; i++) {
-      if (widget.columns[i].sortField == widget.sortField) {
-        sortIndex = i;
-        break;
-      }
-    }
+    final allSelected = widget.items.isNotEmpty &&
+        widget.items.every((item) => widget.selected.contains(widget.idOf(item)));
+    final someSelected =
+        widget.items.any((item) => widget.selected.contains(widget.idOf(item)));
 
-    return Scrollbar(
-      controller: _vertical,
-      thumbVisibility: true,
-      child: SingleChildScrollView(
-        controller: _vertical,
-        child: Scrollbar(
-          controller: _horizontal,
-          thumbVisibility: true,
-          notificationPredicate: (notification) => notification.depth == 1,
-          child: SingleChildScrollView(
-            controller: _horizontal,
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: (widget.columns.length + 2) * 140,
-              ),
-              child: DataTable(
-                sortColumnIndex: sortIndex,
-                sortAscending: widget.sortAscending,
-                showCheckboxColumn: widget.onToggleSelect != null,
-                onSelectAll: widget.onSelectAll == null
-                    ? null
-                    : (checked) => widget.onSelectAll!(checked ?? false),
-                headingRowColor: WidgetStatePropertyAll(
-                  Theme.of(context).colorScheme.surfaceContainerHighest,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minWidth = (showCheckbox ? 56.0 : 0) +
+            widget.columns.length * 140.0 +
+            (showActions ? 140.0 : 0);
+        final parentWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : minWidth;
+        final tableWidth = math.max(parentWidth, minWidth);
+        final divider = BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5));
+
+        Widget cell({
+          required Widget child,
+          AlignmentGeometry alignment = Alignment.centerLeft,
+          bool heading = false,
+        }) {
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: heading ? 14 : 8),
+            child: Align(alignment: alignment, child: child),
+          );
+        }
+
+        final header = TableRow(
+          decoration: BoxDecoration(color: scheme.surfaceContainerHighest),
+          children: [
+            if (showCheckbox)
+              cell(
+                heading: true,
+                alignment: Alignment.center,
+                child: Checkbox(
+                  tristate: true,
+                  value: allSelected ? true : (someSelected ? null : false),
+                  onChanged: widget.onSelectAll == null
+                      ? null
+                      : (value) => widget.onSelectAll!(value ?? false),
                 ),
-                columns: columns,
-                rows: [
-                  for (final item in widget.items)
-                    DataRow(
-                      selected: widget.selected.contains(widget.idOf(item)),
-                      onSelectChanged: widget.onToggleSelect == null
-                          ? null
-                          : (_) => widget.onToggleSelect!(widget.idOf(item)),
-                      cells: [
-                        for (final spec in widget.columns)
-                          DataCell(spec.build(item)),
-                        if (widget.actions != null)
-                          DataCell(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: widget.actions!(item),
-                            ),
-                          ),
+              ),
+            for (final spec in widget.columns)
+              TableRowInkWell(
+                onTap: spec.sortField == null || widget.onSort == null
+                    ? null
+                    : () => widget.onSort!(spec.sortField!),
+                child: cell(
+                  heading: true,
+                  alignment: spec.numeric ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(spec.label, style: headingStyle),
+                      if (spec.sortField != null && spec.sortField == widget.sortField) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          widget.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                          size: 16,
+                        ),
                       ],
+                    ],
+                  ),
+                ),
+              ),
+            if (showActions)
+              cell(
+                heading: true,
+                child: Text('Действия', style: headingStyle),
+              ),
+          ],
+        );
+
+        final rows = [
+          for (final item in widget.items)
+            TableRow(
+              decoration: BoxDecoration(
+                color: widget.selected.contains(widget.idOf(item))
+                    ? scheme.primary.withValues(alpha: 0.08)
+                    : null,
+              ),
+              children: [
+                if (showCheckbox)
+                  cell(
+                    alignment: Alignment.center,
+                    child: Checkbox(
+                      value: widget.selected.contains(widget.idOf(item)),
+                      onChanged: (_) => widget.onToggleSelect!(widget.idOf(item)),
                     ),
-                ],
+                  ),
+                for (final spec in widget.columns)
+                  TableRowInkWell(
+                    onTap: widget.onToggleSelect == null
+                        ? null
+                        : () => widget.onToggleSelect!(widget.idOf(item)),
+                    child: cell(
+                      alignment: spec.numeric ? Alignment.centerRight : Alignment.centerLeft,
+                      child: spec.build(item),
+                    ),
+                  ),
+                if (showActions)
+                  cell(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: widget.actions!(item),
+                    ),
+                  ),
+              ],
+            ),
+        ];
+
+        final table = SizedBox(
+          width: tableWidth,
+          child: Table(
+            columnWidths: {
+              if (showCheckbox) 0: const FixedColumnWidth(56),
+              if (showActions) columnCount - 1: const FixedColumnWidth(140),
+            },
+            defaultColumnWidth: const FlexColumnWidth(),
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            border: TableBorder(horizontalInside: divider, bottom: divider),
+            children: [header, ...rows],
+          ),
+        );
+
+        return Scrollbar(
+          controller: _vertical,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            controller: _vertical,
+            child: Scrollbar(
+              controller: _horizontal,
+              thumbVisibility: true,
+              notificationPredicate: (notification) => notification.depth == 1,
+              child: SingleChildScrollView(
+                controller: _horizontal,
+                scrollDirection: Axis.horizontal,
+                child: table,
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

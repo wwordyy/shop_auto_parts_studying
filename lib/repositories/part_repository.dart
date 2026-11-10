@@ -1,12 +1,11 @@
 import '../models/auto_part.dart';
-import '../models/page_result.dart';
-import '../models/part_query.dart';
+import '../queries/part_query.dart';
+import 'crud.dart';
 
-abstract interface class PartRepository {
-  Future<PageResult<AutoPart>> find(PartQuery query);
-  Future<AutoPart?> findById(int id);
-  Future<void> softDelete(int id);
-  Future<void> hardDelete(int id);
-  Future<void> restore(int id);
-  Future<int> deleteMany(List<int> ids);
+abstract interface class PartRepository implements CrudRepository<AutoPart, PartQuery> {
+  Future<List<AutoPart>> getAll({bool includeDeleted = false});
+  Future<AutoPart> create(AutoPart part);
+  Future<AutoPart> update(AutoPart part);
+  Future<bool> skuExists(String sku, {int? exceptId});
+  Future<int> countByBrand(int brandId);
 }

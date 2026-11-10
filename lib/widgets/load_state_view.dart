@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/load_status.dart';
+import '../utils/load_status.dart';
 
 class LoadStateView extends StatelessWidget {
   final LoadStatus status;

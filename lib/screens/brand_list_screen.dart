@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../data/seed_data.dart';
 import '../models/brand.dart';
-import '../models/brand_query.dart';
-import '../state/brand_list_notifier.dart';
+import '../queries/brand_query.dart';
+import '../repositories/brand_repository.dart';
+import '../repositories/part_repository.dart';
+import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
 import '../widgets/entity_card_list.dart';
@@ -24,12 +26,15 @@ class BrandListScreen extends StatefulWidget {
 }
 
 class _BrandListScreenState extends State<BrandListScreen> {
+  List<String> _countries = [];
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<BrandListNotifier>().applyQuery(widget.query);
     });
+    _loadCountries();
   }
 
   @override
@@ -40,12 +45,33 @@ class _BrandListScreenState extends State<BrandListScreen> {
     }
   }
 
+  Future<void> _loadCountries() async {
+    final brands = await context.read<BrandRepository>().getAll(includeDeleted: true);
+    if (!mounted) return;
+    setState(() => _countries = uniqueSorted(brands.map((item) => item.country)));
+  }
+
   void _go(BrandQuery query) {
     final params = query.toParams();
     context.go(Uri(path: '/brands', queryParameters: params.isEmpty ? null : params).toString());
   }
 
+  Future<bool> _canDelete(Brand brand) async {
+    final count = await context.read<PartRepository>().countByBrand(brand.id);
+    if (count == 0) return true;
+    if (mounted) {
+      await showInfo(
+        context,
+        'Удаление невозможно',
+        'Бренд «${brand.name}» нельзя удалить: на него ссылаются $count запчастей.',
+      );
+    }
+    return false;
+  }
+
   Future<void> _delete(Brand brand) async {
+    if (!await _canDelete(brand)) return;
+    if (!mounted) return;
     final choice = await confirmDelete(context, 'Удалить «${brand.name}»?');
     if (!mounted) return;
     final notifier = context.read<BrandListNotifier>();
@@ -55,6 +81,11 @@ class _BrandListScreenState extends State<BrandListScreen> {
 
   Future<void> _deleteSelected() async {
     final notifier = context.read<BrandListNotifier>();
+    final selected = notifier.result.items.where((item) => notifier.selected.contains(item.id)).toList();
+    for (final brand in selected) {
+      if (!await _canDelete(brand)) return;
+      if (!mounted) return;
+    }
     final choice = await confirmDelete(context, 'Удалить выбранные (${notifier.selected.length})?');
     if (!mounted) return;
     if (choice == DeleteChoice.cancel) return;
@@ -63,22 +94,18 @@ class _BrandListScreenState extends State<BrandListScreen> {
 
   List<Widget> _actions(Brand brand) {
     final notifier = context.read<BrandListNotifier>();
-    return [
-      IconButton(
-        onPressed: () => context.go('/brands/${brand.id}'),
-        icon: const Icon(Icons.visibility_outlined),
-      ),
-      IconButton(
-        onPressed: brand.isDeleted
-            ? () async {
-                if (await confirmRestore(context, brand.name) && mounted) {
-                  await notifier.restore(brand.id);
-                }
+    return crudActions(
+      onView: () => context.go('/brands/${brand.id}'),
+      onEdit: () => context.go('/brands/${brand.id}/edit'),
+      isDeleted: brand.isDeleted,
+      onDeleteOrRestore: brand.isDeleted
+          ? () async {
+              if (await confirmRestore(context, brand.name) && mounted) {
+                await notifier.restore(brand.id);
               }
-            : () => _delete(brand),
-        icon: Icon(brand.isDeleted ? Icons.restore : Icons.delete_outline),
-      ),
-    ];
+            }
+          : () => _delete(brand),
+    );
   }
 
   @override
@@ -94,10 +121,22 @@ class _BrandListScreenState extends State<BrandListScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              DebouncedSearchField(
-                value: query.search,
-                hintText: 'Поиск по названию или стране',
-                onChanged: (value) => _go(query.copyWith(search: value)),
+              Row(
+                children: [
+                  Expanded(
+                    child: DebouncedSearchField(
+                      value: query.search,
+                      hintText: 'Поиск по названию или стране',
+                      onChanged: (value) => _go(query.copyWith(search: value)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: () => context.go('/brands/new'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Добавить'),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -110,7 +149,7 @@ class _BrandListScreenState extends State<BrandListScreen> {
                     value: query.country,
                     items: [
                       const DropdownMenuItem(value: null, child: Text('Все')),
-                      for (final country in seedCountries)
+                      for (final country in _countries)
                         DropdownMenuItem(value: country, child: Text(country)),
                     ],
                     onChanged: (value) => _go(query.copyWith(country: value)),

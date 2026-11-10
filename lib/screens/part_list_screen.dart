@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../data/seed_data.dart';
 import '../models/auto_part.dart';
-import '../models/part_query.dart';
-import '../state/part_list_notifier.dart';
+import '../models/brand.dart';
+import '../models/car_model.dart';
+import '../models/category.dart';
+import '../queries/part_query.dart';
+import '../repositories/brand_repository.dart';
+import '../repositories/car_model_repository.dart';
+import '../repositories/category_repository.dart';
+import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
 import '../widgets/entity_card_list.dart';
@@ -25,6 +30,12 @@ class PartListScreen extends StatefulWidget {
 
 class _PartListScreenState extends State<PartListScreen> {
   static final _years = List<int>.generate(10, (i) => 2015 + i);
+  List<Brand> _brands = [];
+  List<Category> _categories = [];
+  List<CarModel> _cars = [];
+
+  Map<int, String> get _brandNames => {for (final item in _brands) item.id: item.name};
+  Map<int, String> get _categoryNames => {for (final item in _categories) item.id: item.name};
 
   @override
   void initState() {
@@ -32,6 +43,7 @@ class _PartListScreenState extends State<PartListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<PartListNotifier>().applyQuery(widget.query);
     });
+    _loadLookups();
   }
 
   @override
@@ -40,6 +52,21 @@ class _PartListScreenState extends State<PartListScreen> {
     if (oldWidget.query != widget.query) {
       context.read<PartListNotifier>().applyQuery(widget.query);
     }
+  }
+
+  Future<void> _loadLookups() async {
+    final brandRepo = context.read<BrandRepository>();
+    final categoryRepo = context.read<CategoryRepository>();
+    final carRepo = context.read<CarModelRepository>();
+    final brands = await brandRepo.getAll(includeDeleted: true);
+    final categories = await categoryRepo.getAll(includeDeleted: true);
+    final cars = await carRepo.getAll(includeDeleted: true);
+    if (!mounted) return;
+    setState(() {
+      _brands = brands;
+      _categories = categories;
+      _cars = cars;
+    });
   }
 
   void _go(PartQuery query) {
@@ -65,22 +92,18 @@ class _PartListScreenState extends State<PartListScreen> {
 
   List<Widget> _actions(AutoPart part) {
     final notifier = context.read<PartListNotifier>();
-    return [
-      IconButton(
-        onPressed: () => context.go('/parts/${part.id}'),
-        icon: const Icon(Icons.visibility_outlined),
-      ),
-      IconButton(
-        onPressed: part.isDeleted
-            ? () async {
-                if (await confirmRestore(context, part.name) && mounted) {
-                  await notifier.restore(part.id);
-                }
+    return crudActions(
+      onView: () => context.go('/parts/${part.id}'),
+      onEdit: () => context.go('/parts/${part.id}/edit'),
+      isDeleted: part.isDeleted,
+      onDeleteOrRestore: part.isDeleted
+          ? () async {
+              if (await confirmRestore(context, part.name) && mounted) {
+                await notifier.restore(part.id);
               }
-            : () => _delete(part),
-        icon: Icon(part.isDeleted ? Icons.restore : Icons.delete_outline),
-      ),
-    ];
+            }
+          : () => _delete(part),
+    );
   }
 
   @override
@@ -88,6 +111,9 @@ class _PartListScreenState extends State<PartListScreen> {
     final notifier = context.watch<PartListNotifier>();
     final query = widget.query;
     final wide = MediaQuery.sizeOf(context).width >= 600;
+    final activeBrands = _brands.where((item) => !item.isDeleted);
+    final activeCategories = _categories.where((item) => !item.isDeleted);
+    final activeCars = _cars.where((item) => !item.isDeleted);
 
     return Column(
       children: [
@@ -96,10 +122,22 @@ class _PartListScreenState extends State<PartListScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              DebouncedSearchField(
-                value: query.search,
-                hintText: 'Поиск по названию или артикулу',
-                onChanged: (value) => _go(query.copyWith(search: value)),
+              Row(
+                children: [
+                  Expanded(
+                    child: DebouncedSearchField(
+                      value: query.search,
+                      hintText: 'Поиск по названию или артикулу',
+                      onChanged: (value) => _go(query.copyWith(search: value)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: () => context.go('/parts/new'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Добавить'),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -112,7 +150,7 @@ class _PartListScreenState extends State<PartListScreen> {
                     value: query.categoryId,
                     items: [
                       const DropdownMenuItem(value: null, child: Text('Все')),
-                      for (final item in seedCategories)
+                      for (final item in activeCategories)
                         DropdownMenuItem(value: item.id, child: Text(item.name)),
                     ],
                     onChanged: (value) => _go(query.copyWith(categoryId: value)),
@@ -122,10 +160,20 @@ class _PartListScreenState extends State<PartListScreen> {
                     value: query.brandId,
                     items: [
                       const DropdownMenuItem(value: null, child: Text('Все')),
-                      for (final item in seedBrands)
+                      for (final item in activeBrands)
                         DropdownMenuItem(value: item.id, child: Text(item.name)),
                     ],
                     onChanged: (value) => _go(query.copyWith(brandId: value)),
+                  ),
+                  FilterDropdown<int?>(
+                    label: 'Автомобиль',
+                    value: query.carModelId,
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('Все')),
+                      for (final item in activeCars)
+                        DropdownMenuItem(value: item.id, child: Text(item.title)),
+                    ],
+                    onChanged: (value) => _go(query.copyWith(carModelId: value)),
                   ),
                   FilterDropdown<int?>(
                     label: 'Год от',
@@ -200,8 +248,8 @@ class _PartListScreenState extends State<PartListScreen> {
                         TableColumnSpec(label: 'Артикул', sortField: 'sku', build: (p) => Text(p.sku)),
                         TableColumnSpec(label: 'Год', sortField: 'year', numeric: true, build: (p) => Text('${p.year}')),
                         TableColumnSpec(label: 'Цена', sortField: 'price', numeric: true, build: (p) => Text('${p.price} ₽')),
-                        TableColumnSpec(label: 'Бренд', build: (p) => Text(brandById(p.brandId)?.name ?? '—')),
-                        TableColumnSpec(label: 'Категория', build: (p) => Text(categoryById(p.categoryId)?.name ?? '—')),
+                        TableColumnSpec(label: 'Бренд', build: (p) => Text(_brandNames[p.brandId] ?? '—')),
+                        TableColumnSpec(label: 'Категории', build: (p) => Text(joinNames(p.categoryIds, _categoryNames))),
                       ],
                       actions: _actions,
                     )

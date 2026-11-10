@@ -47,3 +47,69 @@ Future<bool> confirmRestore(BuildContext context, String name) async {
       ) ??
       false;
 }
+
+Future<bool> confirmDiscard(BuildContext context) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Уйти без сохранения?'),
+          content: const Text('На форме есть несохранённые изменения. Они будут потеряны.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Остаться'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Уйти'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+}
+
+Future<void> showInfo(BuildContext context, String title, String message) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Понятно'),
+        ),
+      ],
+    ),
+  );
+}
+
+List<Widget> crudActions({
+  required VoidCallback onView,
+  required VoidCallback onEdit,
+  required VoidCallback onDeleteOrRestore,
+  required bool isDeleted,
+}) {
+  return [
+    IconButton(onPressed: onView, icon: const Icon(Icons.visibility_outlined)),
+    IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
+    IconButton(
+      onPressed: onDeleteOrRestore,
+      icon: Icon(isDeleted ? Icons.restore : Icons.delete_outline),
+    ),
+  ];
+}
+
+String joinNames(List<int> ids, Map<int, String> names) {
+  if (ids.isEmpty) return '—';
+  final values = [for (final id in ids) names[id] ?? '—'];
+  return values.join(', ');
+}
+
+String formatDate(DateTime date) {
+  final year = date.year.toString().padLeft(4, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
+}

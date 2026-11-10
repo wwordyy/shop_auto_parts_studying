@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
-  runApp(const ShopApp());
+  final prefs = await SharedPreferences.getInstance();
+  runApp(ShopApp(prefs: prefs));
 }

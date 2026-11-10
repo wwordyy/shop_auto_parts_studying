@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/page_result.dart';
+import '../utils/page_result.dart';
 
 class PaginationBar extends StatelessWidget {
   static const pageSizes = [10, 25, 50];
