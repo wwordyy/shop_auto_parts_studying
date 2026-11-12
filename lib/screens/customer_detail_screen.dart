@@ -68,17 +68,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               isDeleted: item.isDeleted,
               onEdit: () => context.go('/customers/${item.id}/edit'),
               onRestored: () async {
-                await notifier.restore(item.id);
-                await _load();
+                await runMutation(context, () async {
+                  await notifier.restore(item.id);
+                  await _load();
+                });
               },
               onDeleted: (hard) async {
-                if (hard) {
-                  await notifier.hardDelete(item.id);
-                  if (context.mounted) context.go('/customers');
-                } else {
-                  await notifier.softDelete(item.id);
-                  await _load();
-                }
+                await runMutation(context, () async {
+                  if (hard) {
+                    await notifier.hardDelete(item.id);
+                    if (context.mounted) context.go('/customers');
+                  } else {
+                    await notifier.softDelete(item.id);
+                    await _load();
+                  }
+                });
               },
               fields: [
                 ListTile(title: const Text('Email'), subtitle: Text(item.email)),

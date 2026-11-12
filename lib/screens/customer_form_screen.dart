@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api_exceptions.dart';
 import '../models/customer.dart';
 import '../utils/load_status.dart';
 import '../repositories/customer_repository.dart';
 import '../state/list_notifier.dart';
 import '../validation/validators.dart';
+import '../widgets/app_dialogs.dart';
 import '../widgets/entity_form.dart';
 import '../widgets/load_state_view.dart';
 
@@ -34,7 +36,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
   String? _error;
   bool _dirty = false;
   bool _saving = false;
-  String? _emailError;
+  Map<String, String> _serverErrors = {};
 
   @override
   void initState() {
@@ -86,21 +88,14 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
   }
 
   Future<void> _save() async {
-    setState(() => _emailError = null);
+    setState(() => _serverErrors = {});
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final email = _email.text.trim();
     final repo = context.read<CustomerRepository>();
     final notifier = context.read<CustomerListNotifier>();
-    final exists = await repo.emailExists(email, exceptId: widget.id);
-    if (exists) {
-      setState(() => _emailError = 'Такой email уже зарегистрирован');
-      _formKey.currentState?.validate();
-      return;
-    }
     final customer = Customer(
       id: widget.id ?? 0,
       fullName: _fullName.text.trim(),
-      email: email,
+      email: _email.text.trim(),
       phone: _phone.text.trim(),
       card: LoyaltyCard(
         number: _cardNumber.text.trim(),
@@ -116,6 +111,11 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
       await notifier.load();
       if (!mounted) return;
       context.go('/customers');
+    } on ValidationException catch (error) {
+      setState(() => _serverErrors = error.errors);
+      _formKey.currentState?.validate();
+    } on ApiException catch (error) {
+      if (mounted) showSnack(context, error.message);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -138,16 +138,17 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
           FieldSpec.text(
             label: 'ФИО',
             controller: _fullName,
-            validator: (value) => Validators.name(value, label: 'ФИО', max: 80),
+            validator: (value) =>
+                Validators.name(value, label: 'ФИО', max: 80) ?? _serverErrors['fullName'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
             label: 'Email',
             controller: _email,
             keyboardType: TextInputType.emailAddress,
-            validator: (value) => Validators.email(value) ?? _emailError,
+            validator: (value) => Validators.email(value) ?? _serverErrors['email'],
             onChanged: (_) {
-              _emailError = null;
+              _serverErrors.remove('email');
               _markDirty();
             },
           ),

@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'core/api_client.dart';
+import 'core/auth_session.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   usePathUrlStrategy();
-  final prefs = await SharedPreferences.getInstance();
-  runApp(ShopApp(prefs: prefs));
+  final auth = AuthSession();
+  final dio = buildDio(tokenProvider: () => auth.accessToken);
+  try {
+    await auth.tryLogin(dio);
+  } catch (_) {
+    // Список каталога доступен и без токена; CUD потребует повторного входа.
+  }
+  runApp(ShopApp(dio: dio, auth: auth));
 }

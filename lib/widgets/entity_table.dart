@@ -76,7 +76,7 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
       builder: (context, constraints) {
         final minWidth = (showCheckbox ? 56.0 : 0) +
             widget.columns.length * 140.0 +
-            (showActions ? 140.0 : 0);
+            (showActions ? 168.0 : 0);
         final parentWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : minWidth;
         final tableWidth = math.max(parentWidth, minWidth);
         final divider = BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5));
@@ -166,10 +166,15 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
                     ),
                   ),
                 if (showActions)
-                  cell(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: widget.actions!(item),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: widget.actions!(item),
+                      ),
                     ),
                   ),
               ],
@@ -181,7 +186,7 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
           child: Table(
             columnWidths: {
               if (showCheckbox) 0: const FixedColumnWidth(56),
-              if (showActions) columnCount - 1: const FixedColumnWidth(140),
+              if (showActions) columnCount - 1: const FixedColumnWidth(168),
             },
             defaultColumnWidth: const FlexColumnWidth(),
             defaultVerticalAlignment: TableCellVerticalAlignment.middle,

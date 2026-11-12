@@ -7,6 +7,7 @@ import '../utils/load_status.dart';
 import '../repositories/brand_repository.dart';
 import '../repositories/car_model_repository.dart';
 import '../repositories/category_repository.dart';
+import '../repositories/part_repository.dart';
 import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/entity_detail.dart';
@@ -91,18 +92,37 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
               isDeleted: part.isDeleted,
               onEdit: () => context.go('/parts/${part.id}/edit'),
               onRestored: () async {
-                await notifier.restore(part.id);
-                await _load();
+                await runMutation(context, () async {
+                  await notifier.restore(part.id);
+                  await _load();
+                });
               },
               onDeleted: (hard) async {
-                if (hard) {
-                  await notifier.hardDelete(part.id);
-                  if (context.mounted) context.go('/parts');
-                } else {
-                  await notifier.softDelete(part.id);
-                  await _load();
-                }
+                await runMutation(context, () async {
+                  if (hard) {
+                    await notifier.hardDelete(part.id);
+                    if (context.mounted) context.go('/parts');
+                  } else {
+                    await notifier.softDelete(part.id);
+                    await _load();
+                  }
+                });
               },
+              extra: [
+                FilledButton.icon(
+                  onPressed: part.isDeleted
+                      ? null
+                      : () async {
+                          await runMutation(context, () async {
+                            await context.read<PartRepository>().sell(part.id);
+                            await notifier.load();
+                            await _load();
+                          });
+                        },
+                  icon: const Icon(Icons.point_of_sale_outlined),
+                  label: const Text('Продать 1 шт'),
+                ),
+              ],
               fields: [
                 ListTile(title: const Text('Артикул'), subtitle: Text(part.sku)),
                 ListTile(title: const Text('Год'), subtitle: Text('${part.year}')),

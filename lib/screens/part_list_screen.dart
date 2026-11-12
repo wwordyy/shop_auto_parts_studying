@@ -78,8 +78,11 @@ class _PartListScreenState extends State<PartListScreen> {
     final choice = await confirmDelete(context, 'Удалить «${part.name}»?');
     if (!mounted) return;
     final notifier = context.read<PartListNotifier>();
-    if (choice == DeleteChoice.soft) await notifier.softDelete(part.id);
-    if (choice == DeleteChoice.hard) await notifier.hardDelete(part.id);
+    if (choice == DeleteChoice.cancel) return;
+    await runMutation(context, () async {
+      if (choice == DeleteChoice.soft) await notifier.softDelete(part.id);
+      if (choice == DeleteChoice.hard) await notifier.hardDelete(part.id);
+    });
   }
 
   Future<void> _deleteSelected() async {
@@ -87,7 +90,7 @@ class _PartListScreenState extends State<PartListScreen> {
     final choice = await confirmDelete(context, 'Удалить выбранные (${notifier.selected.length})?');
     if (!mounted) return;
     if (choice == DeleteChoice.cancel) return;
-    await notifier.deleteSelected(hard: choice == DeleteChoice.hard);
+    await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
   }
 
   List<Widget> _actions(AutoPart part) {

@@ -7,6 +7,7 @@ import '../models/auto_part.dart';
 import '../models/brand.dart';
 import '../models/car_model.dart';
 import '../models/category.dart';
+import '../core/api_exceptions.dart';
 import '../repositories/brand_repository.dart';
 import '../repositories/car_model_repository.dart';
 import '../repositories/category_repository.dart';
@@ -14,6 +15,7 @@ import '../repositories/part_repository.dart';
 import '../state/list_notifier.dart';
 import '../validation/validators.dart';
 import '../utils/load_status.dart';
+import '../widgets/app_dialogs.dart';
 import '../widgets/entity_form.dart';
 import '../widgets/load_state_view.dart';
 
@@ -41,7 +43,7 @@ class _PartFormScreenState extends State<PartFormScreen> {
   String? _error;
   bool _dirty = false;
   bool _saving = false;
-  String? _skuError;
+  Map<String, String> _serverErrors = {};
   int? _brandId;
   List<int> _categoryIds = [];
   List<int> _carModelIds = [];
@@ -133,32 +135,21 @@ class _PartFormScreenState extends State<PartFormScreen> {
   }
 
   Future<void> _save() async {
-    setState(() => _skuError = null);
+    setState(() => _serverErrors = {});
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final sku = _sku.text.trim();
     final repo = context.read<PartRepository>();
     final notifier = context.read<PartListNotifier>();
-    final exists = await repo.skuExists(sku, exceptId: widget.id);
-    if (exists) {
-      setState(() => _skuError = 'Артикул уже используется');
-      _formKey.currentState?.validate();
-      return;
-    }
-    final year = int.parse(_year.text.trim());
-    final price = int.parse(_price.text.trim());
-    final stockTotal = int.parse(_stockTotal.text.trim());
-    final stockAvailable = int.parse(_stockAvailable.text.trim());
     final part = AutoPart(
       id: widget.id ?? 0,
       name: _name.text.trim(),
-      sku: sku,
-      year: year,
-      price: price,
+      sku: _sku.text.trim(),
+      year: int.parse(_year.text.trim()),
+      price: int.parse(_price.text.trim()),
       brandId: _brandId!,
       categoryIds: _categoryIds,
       carModelIds: _carModelIds,
-      stockTotal: stockTotal,
-      stockAvailable: stockAvailable,
+      stockTotal: int.parse(_stockTotal.text.trim()),
+      stockAvailable: int.parse(_stockAvailable.text.trim()),
     );
     setState(() => _saving = true);
     try {
@@ -171,6 +162,11 @@ class _PartFormScreenState extends State<PartFormScreen> {
       await notifier.load();
       if (!mounted) return;
       context.go('/parts');
+    } on ValidationException catch (error) {
+      setState(() => _serverErrors = error.errors);
+      _formKey.currentState?.validate();
+    } on ApiException catch (error) {
+      if (mounted) showSnack(context, error.message);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -194,15 +190,15 @@ class _PartFormScreenState extends State<PartFormScreen> {
           FieldSpec.text(
             label: 'Название',
             controller: _name,
-            validator: (value) => Validators.name(value),
+            validator: (value) => Validators.name(value) ?? _serverErrors['name'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
             label: 'Артикул',
             controller: _sku,
-            validator: (value) => Validators.sku(value) ?? _skuError,
-            onChanged: (value) {
-              _skuError = null;
+            validator: (value) => Validators.sku(value) ?? _serverErrors['sku'],
+            onChanged: (_) {
+              _serverErrors.remove('sku');
               _markDirty();
             },
           ),
@@ -210,7 +206,9 @@ class _PartFormScreenState extends State<PartFormScreen> {
             label: 'Год',
             controller: _year,
             keyboardType: TextInputType.number,
-            validator: (value) => Validators.range(value, min: 1980, max: currentYear + 1, label: 'Год'),
+            validator: (value) =>
+                Validators.range(value, min: 1980, max: currentYear + 1, label: 'Год') ??
+                _serverErrors['year'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
@@ -248,7 +246,8 @@ class _PartFormScreenState extends State<PartFormScreen> {
               for (final brand in _brands) DropdownMenuItem(value: brand.id, child: Text(brand.name)),
             ],
             onChanged: _onBrandChanged,
-            validator: (value) => value == null ? 'Выберите бренд' : null,
+            validator: (value) =>
+                value == null ? 'Выберите бренд' : _serverErrors['brandId'],
           ),
           FieldSpec.chips(
             label: 'Категории',
@@ -258,8 +257,9 @@ class _PartFormScreenState extends State<PartFormScreen> {
               _categoryIds = value;
               _dirty = true;
             }),
-            validator: (value) =>
-                (value == null || value.isEmpty) ? 'Выберите хотя бы одну категорию' : null,
+            validator: (value) => (value == null || value.isEmpty)
+                ? 'Выберите хотя бы одну категорию'
+                : _serverErrors['categoryIds'],
           ),
           FieldSpec.chips(
             label: 'Совместимые автомобили',
@@ -269,8 +269,9 @@ class _PartFormScreenState extends State<PartFormScreen> {
               _carModelIds = value;
               _dirty = true;
             }),
-            validator: (value) =>
-                (value == null || value.isEmpty) ? 'Выберите хотя бы один автомобиль' : null,
+            validator: (value) => (value == null || value.isEmpty)
+                ? 'Выберите хотя бы один автомобиль'
+                : _serverErrors['carModelIds'],
           ),
         ],
       ),

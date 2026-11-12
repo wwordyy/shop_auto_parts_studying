@@ -73,7 +73,7 @@ class AutoPart {
       };
 
   factory AutoPart.fromJson(Map<String, dynamic> json) {
-    final categoryIds = jsonIntList(json, 'categoryIds');
+    final categoryIds = jsonNestedIds(json, 'categoryIds', 'categories');
     final legacyCategory = json['categoryId'];
     return AutoPart(
       id: jsonInt(json, 'id'),
@@ -81,11 +81,11 @@ class AutoPart {
       sku: jsonString(json, 'sku'),
       year: jsonInt(json, 'year'),
       price: jsonInt(json, 'price'),
-      brandId: jsonInt(json, 'brandId'),
+      brandId: jsonNestedId(json, 'brandId', 'brand'),
       categoryIds: categoryIds.isNotEmpty
           ? categoryIds
           : (legacyCategory == null ? const <int>[] : [jsonInt(json, 'categoryId')]),
-      carModelIds: jsonIntList(json, 'carModelIds'),
+      carModelIds: jsonNestedIds(json, 'carModelIds', 'carModels'),
       stockTotal: jsonInt(json, 'stockTotal'),
       stockAvailable: jsonInt(json, 'stockAvailable'),
       deletedAt: jsonDate(json, 'deletedAt'),

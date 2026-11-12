@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../utils/load_status.dart';
 import '../state/list_notifier.dart';
+import '../widgets/app_dialogs.dart';
 import '../widgets/entity_detail.dart';
 import '../widgets/load_state_view.dart';
 
@@ -67,17 +68,21 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
               isDeleted: item.isDeleted,
               onEdit: () => context.go('/categories/${item.id}/edit'),
               onRestored: () async {
-                await notifier.restore(item.id);
-                await _load();
+                await runMutation(context, () async {
+                  await notifier.restore(item.id);
+                  await _load();
+                });
               },
               onDeleted: (hard) async {
-                if (hard) {
-                  await notifier.hardDelete(item.id);
-                  if (context.mounted) context.go('/categories');
-                } else {
-                  await notifier.softDelete(item.id);
-                  await _load();
-                }
+                await runMutation(context, () async {
+                  if (hard) {
+                    await notifier.hardDelete(item.id);
+                    if (context.mounted) context.go('/categories');
+                  } else {
+                    await notifier.softDelete(item.id);
+                    await _load();
+                  }
+                });
               },
               fields: [
                 ListTile(

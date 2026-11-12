@@ -99,4 +99,14 @@ class PersistentPartRepository implements PartRepository {
   Future<int> countByBrand(int brandId) async {
     return _store.items.where((part) => part.brandId == brandId).length;
   }
+
+  @override
+  Future<AutoPart> sell(int id, {int quantity = 1}) {
+    return _store.replace(id, (current) {
+      if (current.stockAvailable < quantity) {
+        throw StateError('Нет доступного остатка для продажи');
+      }
+      return current.copyWith(stockAvailable: current.stockAvailable - quantity);
+    });
+  }
 }

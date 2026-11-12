@@ -6,7 +6,6 @@ import '../data/seed_data.dart';
 import '../models/brand.dart';
 import '../queries/brand_query.dart';
 import '../repositories/brand_repository.dart';
-import '../repositories/part_repository.dart';
 import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
@@ -56,40 +55,21 @@ class _BrandListScreenState extends State<BrandListScreen> {
     context.go(Uri(path: '/brands', queryParameters: params.isEmpty ? null : params).toString());
   }
 
-  Future<bool> _canDelete(Brand brand) async {
-    final count = await context.read<PartRepository>().countByBrand(brand.id);
-    if (count == 0) return true;
-    if (mounted) {
-      await showInfo(
-        context,
-        'Удаление невозможно',
-        'Бренд «${brand.name}» нельзя удалить: на него ссылаются $count запчастей.',
-      );
-    }
-    return false;
-  }
-
   Future<void> _delete(Brand brand) async {
-    if (!await _canDelete(brand)) return;
-    if (!mounted) return;
     final choice = await confirmDelete(context, 'Удалить «${brand.name}»?');
-    if (!mounted) return;
+    if (!mounted || choice == DeleteChoice.cancel) return;
     final notifier = context.read<BrandListNotifier>();
-    if (choice == DeleteChoice.soft) await notifier.softDelete(brand.id);
-    if (choice == DeleteChoice.hard) await notifier.hardDelete(brand.id);
+    await runMutation(context, () async {
+      if (choice == DeleteChoice.soft) await notifier.softDelete(brand.id);
+      if (choice == DeleteChoice.hard) await notifier.hardDelete(brand.id);
+    });
   }
 
   Future<void> _deleteSelected() async {
     final notifier = context.read<BrandListNotifier>();
-    final selected = notifier.result.items.where((item) => notifier.selected.contains(item.id)).toList();
-    for (final brand in selected) {
-      if (!await _canDelete(brand)) return;
-      if (!mounted) return;
-    }
     final choice = await confirmDelete(context, 'Удалить выбранные (${notifier.selected.length})?');
-    if (!mounted) return;
-    if (choice == DeleteChoice.cancel) return;
-    await notifier.deleteSelected(hard: choice == DeleteChoice.hard);
+    if (!mounted || choice == DeleteChoice.cancel) return;
+    await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
   }
 
   List<Widget> _actions(Brand brand) {

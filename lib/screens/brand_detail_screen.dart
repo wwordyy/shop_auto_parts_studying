@@ -73,27 +73,22 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
               fallbackPath: '/brands',
               isDeleted: brand.isDeleted,
               onEdit: () => context.go('/brands/${brand.id}/edit'),
-              canDelete: () async {
-                if (_partsCount == 0) return true;
-                await showInfo(
-                  context,
-                  'Удаление невозможно',
-                  'Бренд «${brand.name}» нельзя удалить: на него ссылаются $_partsCount запчастей.',
-                );
-                return false;
-              },
               onRestored: () async {
-                await notifier.restore(brand.id);
-                await _load();
+                await runMutation(context, () async {
+                  await notifier.restore(brand.id);
+                  await _load();
+                });
               },
               onDeleted: (hard) async {
-                if (hard) {
-                  await notifier.hardDelete(brand.id);
-                  if (context.mounted) context.go('/brands');
-                } else {
-                  await notifier.softDelete(brand.id);
-                  await _load();
-                }
+                await runMutation(context, () async {
+                  if (hard) {
+                    await notifier.hardDelete(brand.id);
+                    if (context.mounted) context.go('/brands');
+                  } else {
+                    await notifier.softDelete(brand.id);
+                    await _load();
+                  }
+                });
               },
               fields: [
                 ListTile(title: const Text('Страна'), subtitle: Text(brand.country)),

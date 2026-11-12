@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/api_exceptions.dart';
+
 enum DeleteChoice { cancel, soft, hard }
 
 Future<DeleteChoice> confirmDelete(BuildContext context, String message) async {
@@ -69,6 +71,23 @@ Future<bool> confirmDiscard(BuildContext context) async {
       false;
 }
 
+void showSnack(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+}
+
+Future<void> runMutation(BuildContext context, Future<void> Function() action) async {
+  try {
+    await action();
+  } on ApiException catch (error) {
+    if (!context.mounted) return;
+    await showInfo(
+      context,
+      error is ConflictException ? 'Операция невозможна' : 'Ошибка',
+      error.message,
+    );
+  }
+}
+
 Future<void> showInfo(BuildContext context, String title, String message) {
   return showDialog<void>(
     context: context,
@@ -91,12 +110,24 @@ List<Widget> crudActions({
   required VoidCallback onDeleteOrRestore,
   required bool isDeleted,
 }) {
+  Widget button({required VoidCallback onPressed, required IconData icon, required String tooltip}) {
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      icon: Icon(icon, size: 20),
+    );
+  }
+
   return [
-    IconButton(onPressed: onView, icon: const Icon(Icons.visibility_outlined)),
-    IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
-    IconButton(
+    button(onPressed: onView, icon: Icons.visibility_outlined, tooltip: 'Открыть'),
+    button(onPressed: onEdit, icon: Icons.edit_outlined, tooltip: 'Изменить'),
+    button(
       onPressed: onDeleteOrRestore,
-      icon: Icon(isDeleted ? Icons.restore : Icons.delete_outline),
+      icon: isDeleted ? Icons.restore : Icons.delete_outline,
+      tooltip: isDeleted ? 'Восстановить' : 'Удалить',
     ),
   ];
 }

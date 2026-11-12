@@ -42,3 +42,28 @@ DateTime? jsonDate(Map<String, dynamic> json, String key) {
   if (value is! String || value.isEmpty) return null;
   return DateTime.tryParse(value);
 }
+
+int jsonNestedId(Map<String, dynamic> json, String idKey, String objectKey) {
+  if (json[idKey] != null) return jsonInt(json, idKey);
+  final object = json[objectKey];
+  if (object is Map) return jsonInt(Map<String, dynamic>.from(object), 'id');
+  return 0;
+}
+
+List<int> jsonNestedIds(Map<String, dynamic> json, String idsKey, String objectsKey) {
+  final ids = jsonIntList(json, idsKey);
+  if (ids.isNotEmpty) return ids;
+  final objects = json[objectsKey];
+  if (objects is! List) return const [];
+  final result = <int>[];
+  for (final item in objects) {
+    if (item is Map) {
+      result.add(jsonInt(Map<String, dynamic>.from(item), 'id'));
+    } else if (item is int) {
+      result.add(item);
+    } else if (item is num) {
+      result.add(item.toInt());
+    }
+  }
+  return result;
+}

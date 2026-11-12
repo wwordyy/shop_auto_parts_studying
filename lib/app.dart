@@ -1,75 +1,38 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_router.dart';
+import 'core/auth_session.dart';
+import 'repositories/api_brand_repository.dart';
+import 'repositories/api_car_model_repository.dart';
+import 'repositories/api_category_repository.dart';
+import 'repositories/api_customer_repository.dart';
+import 'repositories/api_part_repository.dart';
 import 'repositories/brand_repository.dart';
 import 'repositories/car_model_repository.dart';
 import 'repositories/category_repository.dart';
 import 'repositories/customer_repository.dart';
 import 'repositories/part_repository.dart';
-import 'repositories/persistent_brand_repository.dart';
-import 'repositories/persistent_car_model_repository.dart';
-import 'repositories/persistent_category_repository.dart';
-import 'repositories/persistent_customer_repository.dart';
-import 'repositories/persistent_part_repository.dart';
 import 'state/list_notifier.dart';
-import 'storage/storage_status.dart';
-import 'widgets/app_dialogs.dart';
 
-class ShopApp extends StatefulWidget {
-  final SharedPreferences prefs;
+class ShopApp extends StatelessWidget {
+  final Dio dio;
+  final AuthSession auth;
 
-  const ShopApp({super.key, required this.prefs});
-
-  @override
-  State<ShopApp> createState() => _ShopAppState();
-}
-
-class _ShopAppState extends State<ShopApp> {
-  late final StorageStatus _storageStatus;
-  bool _noticeShown = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _storageStatus = StorageStatus(widget.prefs);
-  }
-
-  void _showNoticeIfNeeded(BuildContext context) {
-    if (_noticeShown) return;
-    _noticeShown = true;
-    final notice = _storageStatus.takeNotice();
-    if (notice == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!context.mounted) return;
-      showInfo(
-        context,
-        'Хранилище обновлено',
-        'Формат данных изменился, поэтому старые записи были сброшены к начальному набору.\n\n$notice',
-      );
-    });
-  }
+  const ShopApp({super.key, required this.dio, required this.auth});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<PartRepository>(
-          create: (_) => PersistentPartRepository(widget.prefs, _storageStatus),
-        ),
-        Provider<BrandRepository>(
-          create: (_) => PersistentBrandRepository(widget.prefs, _storageStatus),
-        ),
-        Provider<CategoryRepository>(
-          create: (_) => PersistentCategoryRepository(widget.prefs, _storageStatus),
-        ),
-        Provider<CarModelRepository>(
-          create: (_) => PersistentCarModelRepository(widget.prefs, _storageStatus),
-        ),
-        Provider<CustomerRepository>(
-          create: (_) => PersistentCustomerRepository(widget.prefs, _storageStatus),
-        ),
+        Provider<Dio>.value(value: dio),
+        Provider<AuthSession>.value(value: auth),
+        Provider<PartRepository>(create: (_) => ApiPartRepository(dio)),
+        Provider<BrandRepository>(create: (_) => ApiBrandRepository(dio)),
+        Provider<CategoryRepository>(create: (_) => ApiCategoryRepository(dio)),
+        Provider<CarModelRepository>(create: (_) => ApiCarModelRepository(dio)),
+        Provider<CustomerRepository>(create: (_) => ApiCustomerRepository(dio)),
         ChangeNotifierProvider(
           create: (context) => PartListNotifier(context.read<PartRepository>()),
         ),
@@ -94,10 +57,6 @@ class _ShopAppState extends State<ShopApp> {
           useMaterial3: true,
         ),
         routerConfig: appRouter,
-        builder: (context, child) {
-          _showNoticeIfNeeded(context);
-          return child ?? const SizedBox.shrink();
-        },
       ),
     );
   }

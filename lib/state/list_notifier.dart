@@ -10,6 +10,7 @@ import '../queries/car_model_query.dart';
 import '../queries/category_query.dart';
 import '../queries/customer_query.dart';
 import '../queries/part_query.dart';
+import '../core/api_exceptions.dart';
 import '../repositories/crud.dart';
 import '../utils/load_status.dart';
 import '../utils/page_result.dart';
@@ -25,6 +26,7 @@ class ListNotifier<T, Q> extends ChangeNotifier {
   PageResult<T> _result = PageResult.empty();
   LoadStatus _status = LoadStatus.idle;
   String? _error;
+  int _loadGeneration = 0;
   final Set<int> _selected = {};
 
   Q get query => _query;
@@ -35,17 +37,27 @@ class ListNotifier<T, Q> extends ChangeNotifier {
   bool get hasSelection => _selected.isNotEmpty;
 
   Future<void> load() async {
+    final generation = ++_loadGeneration;
     _status = LoadStatus.loading;
     _error = null;
     notifyListeners();
     try {
-      _result = await _repository.find(_query);
+      final result = await _repository.find(_query);
+      if (generation != _loadGeneration) return;
+      _result = result;
       _status = LoadStatus.success;
-    } catch (e) {
-      _error = 'Не удалось загрузить список: $e';
+    } on RequestCancelledException {
+      if (generation != _loadGeneration) return;
+    } on ApiException catch (error) {
+      if (generation != _loadGeneration) return;
+      _error = error.message;
+      _status = LoadStatus.error;
+    } catch (error) {
+      if (generation != _loadGeneration) return;
+      _error = 'Не удалось загрузить список: $error';
       _status = LoadStatus.error;
     }
-    notifyListeners();
+    if (generation == _loadGeneration) notifyListeners();
   }
 
   Future<void> applyQuery(Q next) async {

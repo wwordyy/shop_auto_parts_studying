@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api_exceptions.dart';
 import '../models/category.dart';
 import '../utils/load_status.dart';
 import '../repositories/category_repository.dart';
 import '../state/list_notifier.dart';
 import '../validation/validators.dart';
+import '../widgets/app_dialogs.dart';
 import '../widgets/entity_form.dart';
 import '../widgets/load_state_view.dart';
 
@@ -29,6 +31,7 @@ class _CategoryFormScreenState extends State<CategoryFormScreen> {
   String? _error;
   bool _dirty = false;
   bool _saving = false;
+  Map<String, String> _serverErrors = {};
 
   @override
   void initState() {
@@ -72,6 +75,7 @@ class _CategoryFormScreenState extends State<CategoryFormScreen> {
   }
 
   Future<void> _save() async {
+    setState(() => _serverErrors = {});
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final item = Category(
       id: widget.id ?? 0,
@@ -87,6 +91,11 @@ class _CategoryFormScreenState extends State<CategoryFormScreen> {
       await notifier.load();
       if (!mounted) return;
       context.go('/categories');
+    } on ValidationException catch (error) {
+      setState(() => _serverErrors = error.errors);
+      _formKey.currentState?.validate();
+    } on ApiException catch (error) {
+      if (mounted) showSnack(context, error.message);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -109,7 +118,7 @@ class _CategoryFormScreenState extends State<CategoryFormScreen> {
           FieldSpec.text(
             label: 'Название',
             controller: _name,
-            validator: (value) => Validators.name(value),
+            validator: (value) => Validators.name(value) ?? _serverErrors['name'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(

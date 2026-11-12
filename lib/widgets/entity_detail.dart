@@ -12,6 +12,7 @@ class EntityDetail extends StatelessWidget {
   final Future<void> Function() onRestored;
   final Future<void> Function(bool hard) onDeleted;
   final Future<bool> Function()? canDelete;
+  final List<Widget> extra;
 
   const EntityDetail({
     super.key,
@@ -23,6 +24,7 @@ class EntityDetail extends StatelessWidget {
     required this.onRestored,
     required this.onDeleted,
     this.canDelete,
+    this.extra = const [],
   });
 
   void _back(BuildContext context) {
@@ -48,6 +50,10 @@ class EntityDetail extends StatelessWidget {
         const SizedBox(height: 16),
         ...fields,
         if (isDeleted) const ListTile(title: Text('Статус'), subtitle: Text('удалено')),
+        if (extra.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          ...extra,
+        ],
         const SizedBox(height: 16),
         if (isDeleted)
           FilledButton.icon(

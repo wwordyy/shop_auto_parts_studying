@@ -8,4 +8,5 @@ abstract interface class PartRepository implements CrudRepository<AutoPart, Part
   Future<AutoPart> update(AutoPart part);
   Future<bool> skuExists(String sku, {int? exceptId});
   Future<int> countByBrand(int brandId);
+  Future<AutoPart> sell(int id, {int quantity = 1});
 }

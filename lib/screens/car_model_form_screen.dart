@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api_exceptions.dart';
 import '../models/car_model.dart';
 import '../utils/load_status.dart';
 import '../repositories/car_model_repository.dart';
 import '../state/list_notifier.dart';
 import '../validation/validators.dart';
+import '../widgets/app_dialogs.dart';
 import '../widgets/entity_form.dart';
 import '../widgets/load_state_view.dart';
 
@@ -31,6 +33,7 @@ class _CarModelFormScreenState extends State<CarModelFormScreen> {
   String? _error;
   bool _dirty = false;
   bool _saving = false;
+  Map<String, String> _serverErrors = {};
 
   @override
   void initState() {
@@ -78,6 +81,7 @@ class _CarModelFormScreenState extends State<CarModelFormScreen> {
   }
 
   Future<void> _save() async {
+    setState(() => _serverErrors = {});
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final item = CarModel(
       id: widget.id ?? 0,
@@ -95,6 +99,11 @@ class _CarModelFormScreenState extends State<CarModelFormScreen> {
       await notifier.load();
       if (!mounted) return;
       context.go('/cars');
+    } on ValidationException catch (error) {
+      setState(() => _serverErrors = error.errors);
+      _formKey.currentState?.validate();
+    } on ApiException catch (error) {
+      if (mounted) showSnack(context, error.message);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -118,13 +127,14 @@ class _CarModelFormScreenState extends State<CarModelFormScreen> {
           FieldSpec.text(
             label: 'Марка',
             controller: _maker,
-            validator: (value) => Validators.name(value, label: 'Марка', max: 40),
+            validator: (value) =>
+                Validators.name(value, label: 'Марка', max: 40) ?? _serverErrors['maker'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
             label: 'Модель',
             controller: _name,
-            validator: (value) => Validators.name(value, label: 'Модель'),
+            validator: (value) => Validators.name(value, label: 'Модель') ?? _serverErrors['name'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(

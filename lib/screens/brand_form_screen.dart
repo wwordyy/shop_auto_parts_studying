@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api_exceptions.dart';
 import '../models/brand.dart';
 import '../utils/load_status.dart';
 import '../repositories/brand_repository.dart';
 import '../state/list_notifier.dart';
 import '../validation/validators.dart';
+import '../widgets/app_dialogs.dart';
 import '../widgets/entity_form.dart';
 import '../widgets/load_state_view.dart';
 
@@ -30,6 +32,7 @@ class _BrandFormScreenState extends State<BrandFormScreen> {
   String? _error;
   bool _dirty = false;
   bool _saving = false;
+  Map<String, String> _serverErrors = {};
 
   @override
   void initState() {
@@ -75,6 +78,7 @@ class _BrandFormScreenState extends State<BrandFormScreen> {
   }
 
   Future<void> _save() async {
+    setState(() => _serverErrors = {});
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final brand = Brand(
       id: widget.id ?? 0,
@@ -91,6 +95,11 @@ class _BrandFormScreenState extends State<BrandFormScreen> {
       await notifier.load();
       if (!mounted) return;
       context.go('/brands');
+    } on ValidationException catch (error) {
+      setState(() => _serverErrors = error.errors);
+      _formKey.currentState?.validate();
+    } on ApiException catch (error) {
+      if (mounted) showSnack(context, error.message);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -114,13 +123,14 @@ class _BrandFormScreenState extends State<BrandFormScreen> {
           FieldSpec.text(
             label: 'Название',
             controller: _name,
-            validator: (value) => Validators.name(value, label: 'Название'),
+            validator: (value) => Validators.name(value, label: 'Название') ?? _serverErrors['name'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
             label: 'Страна',
             controller: _country,
-            validator: (value) => Validators.name(value, label: 'Страна', max: 40),
+            validator: (value) =>
+                Validators.name(value, label: 'Страна', max: 40) ?? _serverErrors['country'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
@@ -128,7 +138,8 @@ class _BrandFormScreenState extends State<BrandFormScreen> {
             controller: _foundedYear,
             keyboardType: TextInputType.number,
             validator: (value) =>
-                Validators.range(value, min: 1800, max: currentYear, label: 'Год основания'),
+                Validators.range(value, min: 1800, max: currentYear, label: 'Год основания') ??
+                _serverErrors['foundedYear'],
             onChanged: _markDirty,
           ),
         ],

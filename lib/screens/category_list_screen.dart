@@ -47,8 +47,11 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
     final choice = await confirmDelete(context, 'Удалить «${item.name}»?');
     if (!mounted) return;
     final notifier = context.read<CategoryListNotifier>();
-    if (choice == DeleteChoice.soft) await notifier.softDelete(item.id);
-    if (choice == DeleteChoice.hard) await notifier.hardDelete(item.id);
+    if (choice == DeleteChoice.cancel) return;
+    await runMutation(context, () async {
+      if (choice == DeleteChoice.soft) await notifier.softDelete(item.id);
+      if (choice == DeleteChoice.hard) await notifier.hardDelete(item.id);
+    });
   }
 
   Future<void> _deleteSelected() async {
@@ -56,7 +59,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
     final choice = await confirmDelete(context, 'Удалить выбранные (${notifier.selected.length})?');
     if (!mounted) return;
     if (choice == DeleteChoice.cancel) return;
-    await notifier.deleteSelected(hard: choice == DeleteChoice.hard);
+    await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
   }
 
   List<Widget> _actions(Category item) {
