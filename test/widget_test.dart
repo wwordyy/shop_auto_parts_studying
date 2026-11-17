@@ -1,13 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_auto_parts/app.dart';
 import 'package:shop_auto_parts/core/api_client.dart';
-import 'package:shop_auto_parts/core/auth_session.dart';
+import 'package:shop_auto_parts/core/auth_api.dart';
+import 'package:shop_auto_parts/state/auth_notifier.dart';
 
 import 'support/scripted_adapter.dart';
 
 void main() {
-  testWidgets('приложение открывает каталог запчастей', (tester) async {
+  testWidgets('без сессии открывается экран входа', (tester) async {
     final originalOnError = FlutterError.onError;
     FlutterError.onError = (details) {
       if (details.exceptionAsString().contains('overflowed')) return;
@@ -15,44 +17,19 @@ void main() {
     };
     addTearDown(() => FlutterError.onError = originalOnError);
 
-    final auth = AuthSession();
-    final dio = buildDio(tokenProvider: () => auth.accessToken);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final auth = AuthNotifier(prefs);
+    final dio = buildDio(auth: auth);
+    auth.attachApi(AuthApi(dio));
     dio.httpClientAdapter = ScriptedAdapter((options) async {
-      if (options.path.contains('/parts') && options.method == 'GET') {
-        return jsonResponse({
-          'items': [
-            {
-              'id': 1,
-              'name': 'Свеча Bosch',
-              'sku': 'FR7DC+',
-              'year': 2022,
-              'price': 390,
-              'brandId': 1,
-              'categoryIds': [1],
-              'carModelIds': [6],
-              'stockTotal': 40,
-              'stockAvailable': 28,
-            }
-          ],
-          'page': 1,
-          'size': 10,
-          'total': 1,
-          'totalPages': 1,
-        });
-      }
-      return jsonResponse({
-        'items': const [],
-        'page': 1,
-        'size': 100,
-        'total': 0,
-        'totalPages': 1,
-      });
+      return jsonResponse({'message': 'Требуется вход'}, 401);
     });
 
     await tester.pumpWidget(ShopApp(dio: dio, auth: auth));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Магазин автозапчастей'), findsOneWidget);
-    expect(find.text('Запчасти'), findsWidgets);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('Вход'), findsOneWidget);
+    expect(find.text('Войти'), findsOneWidget);
   });
 }

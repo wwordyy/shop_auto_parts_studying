@@ -1,11 +1,20 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../state/auth_notifier.dart';
 import 'api_exceptions.dart';
 import 'config.dart';
 
-Dio buildDio({String? Function()? tokenProvider}) {
-  final dio = Dio(
+bool isAuthPath(String path) {
+  return path.contains('/auth/login') ||
+      path.contains('/auth/register') ||
+      path.contains('/auth/refresh') ||
+      path.contains('/auth/logout');
+}
+
+Dio buildDio({AuthNotifier? auth}) {
+  late final Dio dio;
+  dio = Dio(
     BaseOptions(
       baseUrl: apiBaseUrl,
       connectTimeout: const Duration(seconds: 10),
@@ -16,9 +25,9 @@ Dio buildDio({String? Function()? tokenProvider}) {
   );
 
   dio.interceptors.add(
-    InterceptorsWrapper(
+    QueuedInterceptorsWrapper(
       onRequest: (options, handler) {
-        final token = tokenProvider?.call();
+        final token = auth?.accessToken;
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -51,9 +60,33 @@ Dio buildDio({String? Function()? tokenProvider}) {
         }
         return handler.next(response);
       },
-      onError: (error, handler) {
+      onError: (error, handler) async {
         if (kDebugMode) {
           debugPrint('[API] сбой ${error.requestOptions.uri}: ${error.type}');
+        }
+        final status = error.response?.statusCode;
+        final alreadyRetried = error.requestOptions.extra['retried'] == true;
+        if (auth != null &&
+            status == 401 &&
+            !alreadyRetried &&
+            !isAuthPath(error.requestOptions.path)) {
+          final refreshed = await auth.refreshTokens();
+          if (refreshed) {
+            final options = error.requestOptions;
+            options.extra['retried'] = true;
+            final token = auth.accessToken;
+            if (token != null && token.isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+            try {
+              final response = await dio.fetch(options);
+              return handler.resolve(response);
+            } catch (retryError) {
+              if (retryError is DioException) {
+                return handler.next(retryError);
+              }
+            }
+          }
         }
         return handler.next(error);
       },

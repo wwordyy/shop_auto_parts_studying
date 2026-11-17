@@ -10,6 +10,7 @@ import '../queries/part_query.dart';
 import '../repositories/brand_repository.dart';
 import '../repositories/car_model_repository.dart';
 import '../repositories/category_repository.dart';
+import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
@@ -75,7 +76,11 @@ class _PartListScreenState extends State<PartListScreen> {
   }
 
   Future<void> _delete(AutoPart part) async {
-    final choice = await confirmDelete(context, 'Удалить «${part.name}»?');
+    final choice = await confirmDelete(
+      context,
+      'Удалить «${part.name}»?',
+      allowHard: context.read<AuthNotifier>().permissions.canHardDelete,
+    );
     if (!mounted) return;
     final notifier = context.read<PartListNotifier>();
     if (choice == DeleteChoice.cancel) return;
@@ -87,7 +92,11 @@ class _PartListScreenState extends State<PartListScreen> {
 
   Future<void> _deleteSelected() async {
     final notifier = context.read<PartListNotifier>();
-    final choice = await confirmDelete(context, 'Удалить выбранные (${notifier.selected.length})?');
+    final choice = await confirmDelete(
+      context,
+      'Удалить выбранные (${notifier.selected.length})?',
+      allowHard: context.read<AuthNotifier>().permissions.canHardDelete,
+    );
     if (!mounted) return;
     if (choice == DeleteChoice.cancel) return;
     await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
@@ -95,10 +104,13 @@ class _PartListScreenState extends State<PartListScreen> {
 
   List<Widget> _actions(AutoPart part) {
     final notifier = context.read<PartListNotifier>();
+    final perms = context.read<AuthNotifier>().permissions;
     return crudActions(
       onView: () => context.go('/parts/${part.id}'),
       onEdit: () => context.go('/parts/${part.id}/edit'),
       isDeleted: part.isDeleted,
+      canEdit: perms.canMutate,
+      canDeleteOrRestore: part.isDeleted ? perms.canRestore : perms.canSoftDelete,
       onDeleteOrRestore: part.isDeleted
           ? () async {
               if (await confirmRestore(context, part.name) && mounted) {
@@ -112,6 +124,7 @@ class _PartListScreenState extends State<PartListScreen> {
   @override
   Widget build(BuildContext context) {
     final notifier = context.watch<PartListNotifier>();
+    final perms = context.watch<AuthNotifier>().permissions;
     final query = widget.query;
     final wide = MediaQuery.sizeOf(context).width >= 600;
     final activeBrands = _brands.where((item) => !item.isDeleted);
@@ -134,12 +147,14 @@ class _PartListScreenState extends State<PartListScreen> {
                       onChanged: (value) => _go(query.copyWith(search: value)),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    onPressed: () => context.go('/parts/new'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Добавить'),
-                  ),
+                  if (perms.canMutate) ...[
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: () => context.go('/parts/new'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Добавить'),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -198,18 +213,19 @@ class _PartListScreenState extends State<PartListScreen> {
                     ],
                     onChanged: (value) => _go(query.copyWith(yearTo: value)),
                   ),
-                  FilterChip(
-                    label: const Text('Показать удалённые'),
-                    selected: query.includeDeleted,
-                    onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
-                  ),
+                  if (perms.canViewDeleted)
+                    FilterChip(
+                      label: const Text('Показать удалённые'),
+                      selected: query.includeDeleted,
+                      onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
+                    ),
                   TextButton(
                     onPressed: () => _go(const PartQuery()),
                     child: const Text('Сбросить'),
                   ),
                 ],
               ),
-              if (notifier.hasSelection)
+              if (notifier.hasSelection && perms.canSoftDelete)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Row(
@@ -236,8 +252,8 @@ class _PartListScreenState extends State<PartListScreen> {
                       items: notifier.result.items,
                       idOf: (p) => p.id,
                       selected: notifier.selected,
-                      onToggleSelect: notifier.toggleSelection,
-                      onSelectAll: notifier.selectAllOnPage,
+                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
+                      onSelectAll: perms.canSoftDelete ? notifier.selectAllOnPage : null,
                       sortField: query.sortField,
                       sortAscending: query.sortAscending,
                       onSort: (field) => _go(
@@ -260,7 +276,7 @@ class _PartListScreenState extends State<PartListScreen> {
                       items: notifier.result.items,
                       idOf: (p) => p.id,
                       selected: notifier.selected,
-                      onToggleSelect: notifier.toggleSelection,
+                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
                       titleOf: (p) => p.name,
                       subtitleOf: (p) => '${p.sku} · ${p.year} · ${p.price} ₽',
                       isDeleted: (p) => p.isDeleted,

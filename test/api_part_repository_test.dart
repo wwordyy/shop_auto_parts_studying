@@ -124,4 +124,14 @@ void main() {
 
     expect(await repo.findById(99), isNull);
   });
+
+  test('запрет роли превращается в ForbiddenException', () async {
+    final repo = ApiPartRepository(
+      dioWith((options) async {
+        return jsonResponse({'message': 'Операция доступна начиная с роли «manager»'}, 403);
+      }),
+    );
+
+    expect(repo.sell(1), throwsA(isA<ForbiddenException>()));
+  });
 }

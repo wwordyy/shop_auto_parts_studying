@@ -68,4 +68,27 @@ class Validators {
   static String? name(String? value, {String label = 'Название', int max = 80}) {
     return required(value, label: label) ?? maxLength(value, max, label: label);
   }
+
+  static String? username(String? value) {
+    return required(value, label: 'Логин') ?? minLength(value, 3, label: 'Логин');
+  }
+
+  static bool passwordHasMinLength(String value) => value.length >= 8;
+
+  static bool passwordHasDigit(String value) => RegExp(r'\d').hasMatch(value);
+
+  static bool passwordHasSpecial(String value) =>
+      RegExp(r'[^A-Za-z0-9]').hasMatch(value);
+
+  static bool passwordIsStrong(String value) =>
+      passwordHasMinLength(value) && passwordHasDigit(value) && passwordHasSpecial(value);
+
+  static String? password(String? value) {
+    final text = value ?? '';
+    if (text.isEmpty) return 'Заполните поле «Пароль»';
+    if (!passwordHasMinLength(text)) return 'Пароль: минимум 8 символов';
+    if (!passwordHasDigit(text)) return 'Пароль должен содержать цифру';
+    if (!passwordHasSpecial(text)) return 'Пароль должен содержать специальный символ';
+    return null;
+  }
 }

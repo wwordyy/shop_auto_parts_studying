@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/category.dart';
 import '../queries/category_query.dart';
+import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
@@ -44,7 +45,11 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
   }
 
   Future<void> _delete(Category item) async {
-    final choice = await confirmDelete(context, 'Удалить «${item.name}»?');
+    final choice = await confirmDelete(
+      context,
+      'Удалить «${item.name}»?',
+      allowHard: context.read<AuthNotifier>().permissions.canHardDelete,
+    );
     if (!mounted) return;
     final notifier = context.read<CategoryListNotifier>();
     if (choice == DeleteChoice.cancel) return;
@@ -56,7 +61,11 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
 
   Future<void> _deleteSelected() async {
     final notifier = context.read<CategoryListNotifier>();
-    final choice = await confirmDelete(context, 'Удалить выбранные (${notifier.selected.length})?');
+    final choice = await confirmDelete(
+      context,
+      'Удалить выбранные (${notifier.selected.length})?',
+      allowHard: context.read<AuthNotifier>().permissions.canHardDelete,
+    );
     if (!mounted) return;
     if (choice == DeleteChoice.cancel) return;
     await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
@@ -64,10 +73,13 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
 
   List<Widget> _actions(Category item) {
     final notifier = context.read<CategoryListNotifier>();
+    final perms = context.read<AuthNotifier>().permissions;
     return crudActions(
       onView: () => context.go('/categories/${item.id}'),
       onEdit: () => context.go('/categories/${item.id}/edit'),
       isDeleted: item.isDeleted,
+      canEdit: perms.canMutate,
+      canDeleteOrRestore: item.isDeleted ? perms.canRestore : perms.canSoftDelete,
       onDeleteOrRestore: item.isDeleted
           ? () async {
               if (await confirmRestore(context, item.name) && mounted) {
@@ -81,6 +93,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
   @override
   Widget build(BuildContext context) {
     final notifier = context.watch<CategoryListNotifier>();
+    final perms = context.watch<AuthNotifier>().permissions;
     final query = widget.query;
     final wide = MediaQuery.sizeOf(context).width >= 600;
 
@@ -100,12 +113,14 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                       onChanged: (value) => _go(query.copyWith(search: value)),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    onPressed: () => context.go('/categories/new'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Добавить'),
-                  ),
+                  if (perms.canMutate) ...[
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: () => context.go('/categories/new'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Добавить'),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -114,18 +129,19 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                 runSpacing: 12,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  FilterChip(
-                    label: const Text('Показать удалённые'),
-                    selected: query.includeDeleted,
-                    onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
-                  ),
+                  if (perms.canViewDeleted)
+                    FilterChip(
+                      label: const Text('Показать удалённые'),
+                      selected: query.includeDeleted,
+                      onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
+                    ),
                   TextButton(
                     onPressed: () => _go(const CategoryQuery()),
                     child: const Text('Сбросить'),
                   ),
                 ],
               ),
-              if (notifier.hasSelection)
+              if (notifier.hasSelection && perms.canSoftDelete)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Row(
@@ -152,8 +168,8 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                       items: notifier.result.items,
                       idOf: (item) => item.id,
                       selected: notifier.selected,
-                      onToggleSelect: notifier.toggleSelection,
-                      onSelectAll: notifier.selectAllOnPage,
+                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
+                      onSelectAll: perms.canSoftDelete ? notifier.selectAllOnPage : null,
                       sortField: query.sortField,
                       sortAscending: query.sortAscending,
                       onSort: (field) => _go(
@@ -172,7 +188,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                       items: notifier.result.items,
                       idOf: (item) => item.id,
                       selected: notifier.selected,
-                      onToggleSelect: notifier.toggleSelection,
+                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
                       titleOf: (item) => item.name,
                       subtitleOf: (item) => item.description,
                       isDeleted: (item) => item.isDeleted,

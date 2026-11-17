@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/car_model.dart';
 import '../utils/load_status.dart';
+import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/entity_detail.dart';
@@ -53,6 +54,7 @@ class _CarModelDetailScreenState extends State<CarModelDetailScreen> {
   Widget build(BuildContext context) {
     final item = _item;
     final notifier = context.read<CarModelListNotifier>();
+    final perms = context.watch<AuthNotifier>().permissions;
     return LoadStateView(
       status: _status,
       error: _error,
@@ -66,6 +68,10 @@ class _CarModelDetailScreenState extends State<CarModelDetailScreen> {
               title: item.title,
               fallbackPath: '/cars',
               isDeleted: item.isDeleted,
+              showEdit: perms.canMutate,
+              showDelete: perms.canSoftDelete,
+              showRestore: perms.canRestore,
+              allowHardDelete: perms.canHardDelete,
               onEdit: () => context.go('/cars/${item.id}/edit'),
               onRestored: () async {
                 await runMutation(context, () async {

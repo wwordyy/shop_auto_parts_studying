@@ -4,7 +4,11 @@ import '../core/api_exceptions.dart';
 
 enum DeleteChoice { cancel, soft, hard }
 
-Future<DeleteChoice> confirmDelete(BuildContext context, String message) async {
+Future<DeleteChoice> confirmDelete(
+  BuildContext context,
+  String message, {
+  bool allowHard = true,
+}) async {
   return await showDialog<DeleteChoice>(
         context: context,
         builder: (context) => AlertDialog(
@@ -17,12 +21,13 @@ Future<DeleteChoice> confirmDelete(BuildContext context, String message) async {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, DeleteChoice.soft),
-              child: const Text('Логически'),
+              child: Text(allowHard ? 'Логически' : 'Удалить'),
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, DeleteChoice.hard),
-              child: const Text('Навсегда'),
-            ),
+            if (allowHard)
+              FilledButton(
+                onPressed: () => Navigator.pop(context, DeleteChoice.hard),
+                child: const Text('Навсегда'),
+              ),
           ],
         ),
       ) ??
@@ -78,13 +83,15 @@ void showSnack(BuildContext context, String message) {
 Future<void> runMutation(BuildContext context, Future<void> Function() action) async {
   try {
     await action();
-  } on ApiException catch (error) {
+  }   on ApiException catch (error) {
     if (!context.mounted) return;
-    await showInfo(
-      context,
-      error is ConflictException ? 'Операция невозможна' : 'Ошибка',
-      error.message,
-    );
+    final title = switch (error) {
+      ForbiddenException() => 'Недостаточно прав',
+      UnauthorizedException() => 'Требуется вход',
+      ConflictException() => 'Операция невозможна',
+      _ => 'Ошибка',
+    };
+    await showInfo(context, title, error.message);
   }
 }
 
@@ -109,6 +116,8 @@ List<Widget> crudActions({
   required VoidCallback onEdit,
   required VoidCallback onDeleteOrRestore,
   required bool isDeleted,
+  bool canEdit = true,
+  bool canDeleteOrRestore = true,
 }) {
   Widget button({required VoidCallback onPressed, required IconData icon, required String tooltip}) {
     return IconButton(
@@ -123,12 +132,14 @@ List<Widget> crudActions({
 
   return [
     button(onPressed: onView, icon: Icons.visibility_outlined, tooltip: 'Открыть'),
-    button(onPressed: onEdit, icon: Icons.edit_outlined, tooltip: 'Изменить'),
-    button(
-      onPressed: onDeleteOrRestore,
-      icon: isDeleted ? Icons.restore : Icons.delete_outline,
-      tooltip: isDeleted ? 'Восстановить' : 'Удалить',
-    ),
+    if (canEdit && !isDeleted)
+      button(onPressed: onEdit, icon: Icons.edit_outlined, tooltip: 'Изменить'),
+    if (canDeleteOrRestore)
+      button(
+        onPressed: onDeleteOrRestore,
+        icon: isDeleted ? Icons.restore : Icons.delete_outline,
+        tooltip: isDeleted ? 'Восстановить' : 'Удалить',
+      ),
   ];
 }
 

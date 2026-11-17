@@ -8,6 +8,7 @@ import '../repositories/brand_repository.dart';
 import '../repositories/car_model_repository.dart';
 import '../repositories/category_repository.dart';
 import '../repositories/part_repository.dart';
+import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/entity_detail.dart';
@@ -77,6 +78,7 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
   Widget build(BuildContext context) {
     final part = _part;
     final notifier = context.read<PartListNotifier>();
+    final perms = context.watch<AuthNotifier>().permissions;
     return LoadStateView(
       status: _status,
       error: _error,
@@ -90,6 +92,10 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
               title: part.name,
               fallbackPath: '/parts',
               isDeleted: part.isDeleted,
+              showEdit: perms.canMutate,
+              showDelete: perms.canSoftDelete,
+              showRestore: perms.canRestore,
+              allowHardDelete: perms.canHardDelete,
               onEdit: () => context.go('/parts/${part.id}/edit'),
               onRestored: () async {
                 await runMutation(context, () async {
@@ -109,19 +115,20 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
                 });
               },
               extra: [
-                FilledButton.icon(
-                  onPressed: part.isDeleted
-                      ? null
-                      : () async {
-                          await runMutation(context, () async {
-                            await context.read<PartRepository>().sell(part.id);
-                            await notifier.load();
-                            await _load();
-                          });
-                        },
-                  icon: const Icon(Icons.point_of_sale_outlined),
-                  label: const Text('Продать 1 шт'),
-                ),
+                if (perms.canSell)
+                  FilledButton.icon(
+                    onPressed: part.isDeleted
+                        ? null
+                        : () async {
+                            await runMutation(context, () async {
+                              await context.read<PartRepository>().sell(part.id);
+                              await notifier.load();
+                              await _load();
+                            });
+                          },
+                    icon: const Icon(Icons.point_of_sale_outlined),
+                    label: const Text('Продать 1 шт'),
+                  ),
               ],
               fields: [
                 ListTile(title: const Text('Артикул'), subtitle: Text(part.sku)),

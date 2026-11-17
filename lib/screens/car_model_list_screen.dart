@@ -6,6 +6,7 @@ import '../data/seed_data.dart';
 import '../models/car_model.dart';
 import '../queries/car_model_query.dart';
 import '../repositories/car_model_repository.dart';
+import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
@@ -56,7 +57,11 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
   }
 
   Future<void> _delete(CarModel item) async {
-    final choice = await confirmDelete(context, 'Удалить «${item.title}»?');
+    final choice = await confirmDelete(
+      context,
+      'Удалить «${item.title}»?',
+      allowHard: context.read<AuthNotifier>().permissions.canHardDelete,
+    );
     if (!mounted) return;
     final notifier = context.read<CarModelListNotifier>();
     if (choice == DeleteChoice.cancel) return;
@@ -68,7 +73,11 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
 
   Future<void> _deleteSelected() async {
     final notifier = context.read<CarModelListNotifier>();
-    final choice = await confirmDelete(context, 'Удалить выбранные (${notifier.selected.length})?');
+    final choice = await confirmDelete(
+      context,
+      'Удалить выбранные (${notifier.selected.length})?',
+      allowHard: context.read<AuthNotifier>().permissions.canHardDelete,
+    );
     if (!mounted) return;
     if (choice == DeleteChoice.cancel) return;
     await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
@@ -76,10 +85,13 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
 
   List<Widget> _actions(CarModel item) {
     final notifier = context.read<CarModelListNotifier>();
+    final perms = context.read<AuthNotifier>().permissions;
     return crudActions(
       onView: () => context.go('/cars/${item.id}'),
       onEdit: () => context.go('/cars/${item.id}/edit'),
       isDeleted: item.isDeleted,
+      canEdit: perms.canMutate,
+      canDeleteOrRestore: item.isDeleted ? perms.canRestore : perms.canSoftDelete,
       onDeleteOrRestore: item.isDeleted
           ? () async {
               if (await confirmRestore(context, item.title) && mounted) {
@@ -93,6 +105,7 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
   @override
   Widget build(BuildContext context) {
     final notifier = context.watch<CarModelListNotifier>();
+    final perms = context.watch<AuthNotifier>().permissions;
     final query = widget.query;
     final wide = MediaQuery.sizeOf(context).width >= 600;
 
@@ -112,12 +125,14 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
                       onChanged: (value) => _go(query.copyWith(search: value)),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    onPressed: () => context.go('/cars/new'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Добавить'),
-                  ),
+                  if (perms.canMutate) ...[
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: () => context.go('/cars/new'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Добавить'),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -136,18 +151,19 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
                     ],
                     onChanged: (value) => _go(query.copyWith(maker: value)),
                   ),
-                  FilterChip(
-                    label: const Text('Показать удалённые'),
-                    selected: query.includeDeleted,
-                    onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
-                  ),
+                  if (perms.canViewDeleted)
+                    FilterChip(
+                      label: const Text('Показать удалённые'),
+                      selected: query.includeDeleted,
+                      onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
+                    ),
                   TextButton(
                     onPressed: () => _go(const CarModelQuery()),
                     child: const Text('Сбросить'),
                   ),
                 ],
               ),
-              if (notifier.hasSelection)
+              if (notifier.hasSelection && perms.canSoftDelete)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Row(
@@ -174,8 +190,8 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
                       items: notifier.result.items,
                       idOf: (item) => item.id,
                       selected: notifier.selected,
-                      onToggleSelect: notifier.toggleSelection,
-                      onSelectAll: notifier.selectAllOnPage,
+                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
+                      onSelectAll: perms.canSoftDelete ? notifier.selectAllOnPage : null,
                       sortField: query.sortField,
                       sortAscending: query.sortAscending,
                       onSort: (field) => _go(
@@ -200,7 +216,7 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
                       items: notifier.result.items,
                       idOf: (item) => item.id,
                       selected: notifier.selected,
-                      onToggleSelect: notifier.toggleSelection,
+                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
                       titleOf: (item) => item.title,
                       subtitleOf: (item) => '${item.yearFrom}–${item.yearTo}',
                       isDeleted: (item) => item.isDeleted,

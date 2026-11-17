@@ -13,6 +13,10 @@ class EntityDetail extends StatelessWidget {
   final Future<void> Function(bool hard) onDeleted;
   final Future<bool> Function()? canDelete;
   final List<Widget> extra;
+  final bool showEdit;
+  final bool showDelete;
+  final bool showRestore;
+  final bool allowHardDelete;
 
   const EntityDetail({
     super.key,
@@ -25,6 +29,10 @@ class EntityDetail extends StatelessWidget {
     required this.onDeleted,
     this.canDelete,
     this.extra = const [],
+    this.showEdit = true,
+    this.showDelete = true,
+    this.showRestore = true,
+    this.allowHardDelete = true,
   });
 
   void _back(BuildContext context) {
@@ -44,7 +52,8 @@ class EntityDetail extends StatelessWidget {
           children: [
             IconButton(onPressed: () => _back(context), icon: const Icon(Icons.arrow_back)),
             Expanded(child: Text(title, style: Theme.of(context).textTheme.headlineSmall)),
-            IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
+            if (showEdit && !isDeleted)
+              IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
           ],
         ),
         const SizedBox(height: 16),
@@ -55,7 +64,7 @@ class EntityDetail extends StatelessWidget {
           ...extra,
         ],
         const SizedBox(height: 16),
-        if (isDeleted)
+        if (isDeleted && showRestore)
           FilledButton.icon(
             onPressed: () async {
               if (!await confirmRestore(context, title) || !context.mounted) return;
@@ -64,12 +73,16 @@ class EntityDetail extends StatelessWidget {
             icon: const Icon(Icons.restore),
             label: const Text('Восстановить'),
           )
-        else
+        else if (!isDeleted && showDelete)
           FilledButton.tonalIcon(
             onPressed: () async {
               if (canDelete != null && !await canDelete!()) return;
               if (!context.mounted) return;
-              final choice = await confirmDelete(context, 'Запись «$title» будет удалена.');
+              final choice = await confirmDelete(
+                context,
+                'Запись «$title» будет удалена.',
+                allowHard: allowHardDelete,
+              );
               if (!context.mounted || choice == DeleteChoice.cancel) return;
               await onDeleted(choice == DeleteChoice.hard);
             },

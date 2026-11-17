@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/brand.dart';
 import '../utils/load_status.dart';
 import '../repositories/part_repository.dart';
+import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/entity_detail.dart';
@@ -59,6 +60,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
   Widget build(BuildContext context) {
     final brand = _brand;
     final notifier = context.read<BrandListNotifier>();
+    final perms = context.watch<AuthNotifier>().permissions;
     return LoadStateView(
       status: _status,
       error: _error,
@@ -72,6 +74,10 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
               title: brand.name,
               fallbackPath: '/brands',
               isDeleted: brand.isDeleted,
+              showEdit: perms.canMutate,
+              showDelete: perms.canSoftDelete,
+              showRestore: perms.canRestore,
+              allowHardDelete: perms.canHardDelete,
               onEdit: () => context.go('/brands/${brand.id}/edit'),
               onRestored: () async {
                 await runMutation(context, () async {

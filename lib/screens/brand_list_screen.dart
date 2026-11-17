@@ -6,6 +6,7 @@ import '../data/seed_data.dart';
 import '../models/brand.dart';
 import '../queries/brand_query.dart';
 import '../repositories/brand_repository.dart';
+import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
@@ -56,7 +57,11 @@ class _BrandListScreenState extends State<BrandListScreen> {
   }
 
   Future<void> _delete(Brand brand) async {
-    final choice = await confirmDelete(context, 'Удалить «${brand.name}»?');
+    final choice = await confirmDelete(
+      context,
+      'Удалить «${brand.name}»?',
+      allowHard: context.read<AuthNotifier>().permissions.canHardDelete,
+    );
     if (!mounted || choice == DeleteChoice.cancel) return;
     final notifier = context.read<BrandListNotifier>();
     await runMutation(context, () async {
@@ -67,17 +72,24 @@ class _BrandListScreenState extends State<BrandListScreen> {
 
   Future<void> _deleteSelected() async {
     final notifier = context.read<BrandListNotifier>();
-    final choice = await confirmDelete(context, 'Удалить выбранные (${notifier.selected.length})?');
+    final choice = await confirmDelete(
+      context,
+      'Удалить выбранные (${notifier.selected.length})?',
+      allowHard: context.read<AuthNotifier>().permissions.canHardDelete,
+    );
     if (!mounted || choice == DeleteChoice.cancel) return;
     await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
   }
 
   List<Widget> _actions(Brand brand) {
     final notifier = context.read<BrandListNotifier>();
+    final perms = context.read<AuthNotifier>().permissions;
     return crudActions(
       onView: () => context.go('/brands/${brand.id}'),
       onEdit: () => context.go('/brands/${brand.id}/edit'),
       isDeleted: brand.isDeleted,
+      canEdit: perms.canMutate,
+      canDeleteOrRestore: brand.isDeleted ? perms.canRestore : perms.canSoftDelete,
       onDeleteOrRestore: brand.isDeleted
           ? () async {
               if (await confirmRestore(context, brand.name) && mounted) {
@@ -91,6 +103,7 @@ class _BrandListScreenState extends State<BrandListScreen> {
   @override
   Widget build(BuildContext context) {
     final notifier = context.watch<BrandListNotifier>();
+    final perms = context.watch<AuthNotifier>().permissions;
     final query = widget.query;
     final wide = MediaQuery.sizeOf(context).width >= 600;
 
@@ -110,12 +123,14 @@ class _BrandListScreenState extends State<BrandListScreen> {
                       onChanged: (value) => _go(query.copyWith(search: value)),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    onPressed: () => context.go('/brands/new'),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Добавить'),
-                  ),
+                  if (perms.canMutate) ...[
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: () => context.go('/brands/new'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Добавить'),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -134,18 +149,19 @@ class _BrandListScreenState extends State<BrandListScreen> {
                     ],
                     onChanged: (value) => _go(query.copyWith(country: value)),
                   ),
-                  FilterChip(
-                    label: const Text('Показать удалённые'),
-                    selected: query.includeDeleted,
-                    onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
-                  ),
+                  if (perms.canViewDeleted)
+                    FilterChip(
+                      label: const Text('Показать удалённые'),
+                      selected: query.includeDeleted,
+                      onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
+                    ),
                   TextButton(
                     onPressed: () => _go(const BrandQuery()),
                     child: const Text('Сбросить'),
                   ),
                 ],
               ),
-              if (notifier.hasSelection)
+              if (notifier.hasSelection && perms.canSoftDelete)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Row(
@@ -172,8 +188,8 @@ class _BrandListScreenState extends State<BrandListScreen> {
                       items: notifier.result.items,
                       idOf: (b) => b.id,
                       selected: notifier.selected,
-                      onToggleSelect: notifier.toggleSelection,
-                      onSelectAll: notifier.selectAllOnPage,
+                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
+                      onSelectAll: perms.canSoftDelete ? notifier.selectAllOnPage : null,
                       sortField: query.sortField,
                       sortAscending: query.sortAscending,
                       onSort: (field) => _go(
@@ -198,7 +214,7 @@ class _BrandListScreenState extends State<BrandListScreen> {
                       items: notifier.result.items,
                       idOf: (b) => b.id,
                       selected: notifier.selected,
-                      onToggleSelect: notifier.toggleSelection,
+                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
                       titleOf: (b) => b.name,
                       subtitleOf: (b) => '${b.country} · ${b.foundedYear}',
                       isDeleted: (b) => b.isDeleted,
