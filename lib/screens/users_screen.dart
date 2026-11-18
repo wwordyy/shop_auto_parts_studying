@@ -5,6 +5,8 @@ import '../core/auth_api.dart';
 import '../models/app_user.dart';
 import '../utils/load_status.dart';
 import '../utils/page_result.dart';
+import '../widgets/adaptive_collection.dart';
+import '../widgets/ellipsis_text.dart';
 import '../widgets/entity_table.dart';
 import '../widgets/load_state_view.dart';
 import '../widgets/pagination_bar.dart';
@@ -59,9 +61,11 @@ class _UsersScreenState extends State<UsersScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Пользователи', style: Theme.of(context).textTheme.headlineSmall),
+                Text('Пользователи',
+                    style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 8),
-                const Text('Раздел только для администратора: учётные записи и роли.'),
+                const Text(
+                    'Раздел только для администратора: учётные записи и роли.'),
               ],
             ),
           ),
@@ -74,15 +78,26 @@ class _UsersScreenState extends State<UsersScreen> {
               error: _error,
               isEmpty: _result.items.isEmpty,
               onRetry: _load,
-              child: EntityTable<AppUser>(
+              child: AdaptiveCollection<AppUser>(
                 items: _result.items,
                 idOf: (item) => item.id,
                 columns: [
-                  TableColumnSpec(label: 'Логин', build: (item) => Text(item.username)),
-                  TableColumnSpec(label: 'Имя', build: (item) => Text(item.displayName)),
-                  TableColumnSpec(label: 'Email', build: (item) => Text(item.email.isEmpty ? '—' : item.email)),
-                  TableColumnSpec(label: 'Роль', build: (item) => Text(item.role.label)),
+                  TableColumnSpec(
+                      label: 'Логин',
+                      build: (item) => EllipsisText(item.username)),
+                  TableColumnSpec(
+                      label: 'Имя',
+                      build: (item) => EllipsisText(item.displayName)),
+                  TableColumnSpec(
+                    label: 'Email',
+                    build: (item) =>
+                        EllipsisText(item.email.isEmpty ? '—' : item.email),
+                  ),
+                  TableColumnSpec(
+                      label: 'Роль', build: (item) => Text(item.role.label)),
                 ],
+                titleOf: (item) => item.displayName,
+                subtitleOf: (item) => '${item.username} · ${item.role.label}',
               ),
             ),
           ),

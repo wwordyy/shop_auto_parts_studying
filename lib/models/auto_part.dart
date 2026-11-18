@@ -84,7 +84,9 @@ class AutoPart {
       brandId: jsonNestedId(json, 'brandId', 'brand'),
       categoryIds: categoryIds.isNotEmpty
           ? categoryIds
-          : (legacyCategory == null ? const <int>[] : [jsonInt(json, 'categoryId')]),
+          : (legacyCategory == null
+              ? const <int>[]
+              : [jsonInt(json, 'categoryId')]),
       carModelIds: jsonNestedIds(json, 'carModelIds', 'carModels'),
       stockTotal: jsonInt(json, 'stockTotal'),
       stockAvailable: jsonInt(json, 'stockAvailable'),

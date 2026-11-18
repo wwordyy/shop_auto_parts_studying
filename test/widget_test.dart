@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_auto_parts/app.dart';
 import 'package:shop_auto_parts/core/api_client.dart';
 import 'package:shop_auto_parts/core/auth_api.dart';
+import 'package:shop_auto_parts/core/connectivity_monitor.dart';
 import 'package:shop_auto_parts/state/auth_notifier.dart';
 
 import 'support/scripted_adapter.dart';
@@ -20,13 +21,15 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final auth = AuthNotifier(prefs);
-    final dio = buildDio(auth: auth);
+    final connectivity = ConnectivityMonitor()..attach();
+    final dio = buildDio(auth: auth, connectivity: connectivity);
     auth.attachApi(AuthApi(dio));
     dio.httpClientAdapter = ScriptedAdapter((options) async {
       return jsonResponse({'message': 'Требуется вход'}, 401);
     });
 
-    await tester.pumpWidget(ShopApp(dio: dio, auth: auth));
+    await tester
+        .pumpWidget(ShopApp(dio: dio, auth: auth, connectivity: connectivity));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Вход'), findsOneWidget);

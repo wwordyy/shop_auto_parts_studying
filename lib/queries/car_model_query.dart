@@ -76,7 +76,8 @@ class CarModelQuery {
       includeDeleted == other.includeDeleted;
 
   @override
-  int get hashCode => Object.hash(search, maker, sortField, sortAscending, page, size, includeDeleted);
+  int get hashCode => Object.hash(
+      search, maker, sortField, sortAscending, page, size, includeDeleted);
 
   static const _unset = Object();
 }

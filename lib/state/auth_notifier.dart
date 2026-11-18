@@ -51,7 +51,10 @@ class AuthNotifier extends ChangeNotifier {
       return;
     }
     if (_sessionExpiredByWallClock || _sessionExpiredByInactivity) {
-      await logout(reason: _sessionExpiredByWallClock ? LogoutReason.sessionExpired : LogoutReason.inactivity);
+      await logout(
+          reason: _sessionExpiredByWallClock
+              ? LogoutReason.sessionExpired
+              : LogoutReason.inactivity);
       return;
     }
     _scheduleSessionEnd();
@@ -143,13 +146,15 @@ class AuthNotifier extends ChangeNotifier {
 
   void touch() {
     if (!isAuthenticated) return;
-    unawaited(_prefs.setString(_kLastActivity, DateTime.now().toIso8601String()));
+    unawaited(
+        _prefs.setString(_kLastActivity, DateTime.now().toIso8601String()));
     if (_sessionExpiredByWallClock) {
       unawaited(logout(reason: LogoutReason.sessionExpired));
     }
   }
 
-  Future<void> _applyTokens(AuthTokens result, {bool keepSessionStart = false}) async {
+  Future<void> _applyTokens(AuthTokens result,
+      {bool keepSessionStart = false}) async {
     _accessToken = result.accessToken;
     _refreshToken = result.refreshToken;
     _user = result.user;
@@ -158,7 +163,8 @@ class AuthNotifier extends ChangeNotifier {
     await _prefs.setString(_kUser, jsonEncode(result.user.toJson()));
     await _prefs.setString(_kLastActivity, DateTime.now().toIso8601String());
     if (!keepSessionStart || _prefs.getString(_kSessionStarted) == null) {
-      await _prefs.setString(_kSessionStarted, DateTime.now().toIso8601String());
+      await _prefs.setString(
+          _kSessionStarted, DateTime.now().toIso8601String());
     }
     _scheduleSessionEnd();
   }
@@ -181,7 +187,9 @@ class AuthNotifier extends ChangeNotifier {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) return AppUser.fromJson(decoded);
-      if (decoded is Map) return AppUser.fromJson(Map<String, dynamic>.from(decoded));
+      if (decoded is Map) {
+        return AppUser.fromJson(Map<String, dynamic>.from(decoded));
+      }
     } catch (_) {}
     return null;
   }
@@ -195,25 +203,30 @@ class AuthNotifier extends ChangeNotifier {
   bool get _sessionExpiredByWallClock {
     final started = _readTime(_kSessionStarted);
     if (started == null) return false;
-    return DateTime.now().difference(started) >= Duration(minutes: sessionMaxMinutes);
+    return DateTime.now().difference(started) >=
+        Duration(minutes: sessionMaxMinutes);
   }
 
   bool get _sessionExpiredByInactivity {
     final last = _readTime(_kLastActivity);
     if (last == null) return false;
-    return DateTime.now().difference(last) >= Duration(seconds: inactivityTimeoutSeconds);
+    return DateTime.now().difference(last) >=
+        Duration(seconds: inactivityTimeoutSeconds);
   }
 
   void _scheduleSessionEnd() {
     _sessionTimer?.cancel();
     final started = _readTime(_kSessionStarted);
     if (started == null) return;
-    final remaining = started.add(Duration(minutes: sessionMaxMinutes)).difference(DateTime.now());
+    final remaining = started
+        .add(Duration(minutes: sessionMaxMinutes))
+        .difference(DateTime.now());
     if (remaining.isNegative) {
       unawaited(logout(reason: LogoutReason.sessionExpired));
       return;
     }
-    _sessionTimer = Timer(remaining, () => logout(reason: LogoutReason.sessionExpired));
+    _sessionTimer =
+        Timer(remaining, () => logout(reason: LogoutReason.sessionExpired));
   }
 
   @override

@@ -108,7 +108,8 @@ void main() {
     final repo = ApiPartRepository(
       dioWith((options) async {
         expect(options.path, '/parts/1/sell');
-        return jsonResponse({'message': 'Нет доступного остатка для продажи'}, 409);
+        return jsonResponse(
+            {'message': 'Нет доступного остатка для продажи'}, 409);
       }),
     );
 
@@ -128,7 +129,8 @@ void main() {
   test('запрет роли превращается в ForbiddenException', () async {
     final repo = ApiPartRepository(
       dioWith((options) async {
-        return jsonResponse({'message': 'Операция доступна начиная с роли «manager»'}, 403);
+        return jsonResponse(
+            {'message': 'Операция доступна начиная с роли «manager»'}, 403);
       }),
     );
 

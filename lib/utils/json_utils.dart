@@ -6,7 +6,8 @@ int jsonInt(Map<String, dynamic> json, String key, [int fallback = 0]) {
   return fallback;
 }
 
-String jsonString(Map<String, dynamic> json, String key, [String fallback = '']) {
+String jsonString(Map<String, dynamic> json, String key,
+    [String fallback = '']) {
   final value = json[key];
   if (value == null) return fallback;
   return value.toString();
@@ -50,7 +51,8 @@ int jsonNestedId(Map<String, dynamic> json, String idKey, String objectKey) {
   return 0;
 }
 
-List<int> jsonNestedIds(Map<String, dynamic> json, String idsKey, String objectsKey) {
+List<int> jsonNestedIds(
+    Map<String, dynamic> json, String idsKey, String objectsKey) {
   final ids = jsonIntList(json, idsKey);
   if (ids.isNotEmpty) return ids;
   final objects = json[objectsKey];

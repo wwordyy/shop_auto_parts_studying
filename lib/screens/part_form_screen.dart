@@ -190,7 +190,8 @@ class _PartFormScreenState extends State<PartFormScreen> {
           FieldSpec.text(
             label: 'Название',
             controller: _name,
-            validator: (value) => Validators.name(value) ?? _serverErrors['name'],
+            validator: (value) =>
+                Validators.name(value) ?? _serverErrors['name'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
@@ -207,7 +208,8 @@ class _PartFormScreenState extends State<PartFormScreen> {
             controller: _year,
             keyboardType: TextInputType.number,
             validator: (value) =>
-                Validators.range(value, min: 1980, max: currentYear + 1, label: 'Год') ??
+                Validators.range(value,
+                    min: 1980, max: currentYear + 1, label: 'Год') ??
                 _serverErrors['year'],
             onChanged: _markDirty,
           ),
@@ -222,7 +224,8 @@ class _PartFormScreenState extends State<PartFormScreen> {
             label: 'Всего на складе',
             controller: _stockTotal,
             keyboardType: TextInputType.number,
-            validator: (value) => Validators.positive(value, label: 'Всего на складе'),
+            validator: (value) =>
+                Validators.positive(value, label: 'Всего на складе'),
             onChanged: _markDirty,
           ),
           FieldSpec.text(
@@ -234,7 +237,9 @@ class _PartFormScreenState extends State<PartFormScreen> {
               if (base != null) return base;
               final available = int.parse(value!.trim());
               final total = int.tryParse(_stockTotal.text.trim()) ?? 0;
-              if (available > total) return 'Доступно не может быть больше общего количества';
+              if (available > total) {
+                return 'Доступно не может быть больше общего количества';
+              }
               return null;
             },
             onChanged: _markDirty,
@@ -243,7 +248,8 @@ class _PartFormScreenState extends State<PartFormScreen> {
             label: 'Бренд',
             value: _brandId,
             items: [
-              for (final brand in _brands) DropdownMenuItem(value: brand.id, child: Text(brand.name)),
+              for (final brand in _brands)
+                DropdownMenuItem(value: brand.id, child: Text(brand.name)),
             ],
             onChanged: _onBrandChanged,
             validator: (value) =>
@@ -252,7 +258,10 @@ class _PartFormScreenState extends State<PartFormScreen> {
           FieldSpec.chips(
             label: 'Категории',
             value: _categoryIds,
-            options: [for (final item in _visibleCategories) ChipOption(item.id, item.name)],
+            options: [
+              for (final item in _visibleCategories)
+                ChipOption(item.id, item.name)
+            ],
             onChanged: (value) => setState(() {
               _categoryIds = value;
               _dirty = true;
@@ -264,7 +273,9 @@ class _PartFormScreenState extends State<PartFormScreen> {
           FieldSpec.chips(
             label: 'Совместимые автомобили',
             value: _carModelIds,
-            options: [for (final item in _cars) ChipOption(item.id, item.title)],
+            options: [
+              for (final item in _cars) ChipOption(item.id, item.title)
+            ],
             onChanged: (value) => setState(() {
               _carModelIds = value;
               _dirty = true;

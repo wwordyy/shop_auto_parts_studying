@@ -18,8 +18,8 @@ class PersistentCategoryRepository implements CategoryRepository {
           toJson: (item) => item.toJson(),
           idOf: (item) => item.id,
           isDeleted: (item) => item.isDeleted,
-          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) =>
-              item.copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
+          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) => item
+              .copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
           status: status,
         );
 
@@ -52,11 +52,12 @@ class PersistentCategoryRepository implements CategoryRepository {
   Future<Category?> findById(int id) async => _store.byId(id);
 
   @override
-  Future<Category> create(Category category) => _store.add(category.copyWith(id: _store.nextId));
+  Future<Category> create(Category category) =>
+      _store.add(category.copyWith(id: _store.nextId));
 
   @override
-  Future<Category> update(Category category) =>
-      _store.replace(category.id, (current) => category.copyWith(deletedAt: current.deletedAt));
+  Future<Category> update(Category category) => _store.replace(category.id,
+      (current) => category.copyWith(deletedAt: current.deletedAt));
 
   @override
   Future<void> softDelete(int id) => _store.softDelete(id);

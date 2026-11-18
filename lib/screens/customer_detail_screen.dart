@@ -36,7 +36,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       _error = null;
     });
     try {
-      final item = await context.read<CustomerListNotifier>().findById(widget.id);
+      final item =
+          await context.read<CustomerListNotifier>().findById(widget.id);
       setState(() {
         _item = item;
         _status = item == null ? LoadStatus.error : LoadStatus.success;
@@ -91,15 +92,24 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 });
               },
               fields: [
-                ListTile(title: const Text('Email'), subtitle: Text(item.email)),
-                ListTile(title: const Text('Телефон'), subtitle: Text(item.phone)),
+                ListTile(
+                    title: const Text('Email'), subtitle: Text(item.email)),
+                ListTile(
+                    title: const Text('Телефон'), subtitle: Text(item.phone)),
                 const Divider(),
                 ListTile(
-                  title: Text('Дисконтная карта', style: Theme.of(context).textTheme.titleMedium),
+                  title: Text('Дисконтная карта',
+                      style: Theme.of(context).textTheme.titleMedium),
                 ),
-                ListTile(title: const Text('Номер'), subtitle: Text(item.card.number)),
-                ListTile(title: const Text('Дата выдачи'), subtitle: Text(formatDate(item.card.issuedAt))),
-                ListTile(title: const Text('Скидка'), subtitle: Text('${item.card.discountPercent}%')),
+                ListTile(
+                    title: const Text('Номер'),
+                    subtitle: Text(item.card.number)),
+                ListTile(
+                    title: const Text('Дата выдачи'),
+                    subtitle: Text(formatDate(item.card.issuedAt))),
+                ListTile(
+                    title: const Text('Скидка'),
+                    subtitle: Text('${item.card.discountPercent}%')),
                 ListTile(
                   title: const Text('Статус карты'),
                   subtitle: Text(item.card.active ? 'активна' : 'неактивна'),

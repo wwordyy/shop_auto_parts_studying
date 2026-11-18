@@ -20,11 +20,14 @@ class Validators {
 
   static String? integer(String? value, {String label = 'Поле'}) {
     if (value == null || value.trim().isEmpty) return 'Заполните поле «$label»';
-    if (int.tryParse(value.trim()) == null) return '«$label»: введите целое число';
+    if (int.tryParse(value.trim()) == null) {
+      return '«$label»: введите целое число';
+    }
     return null;
   }
 
-  static String? range(String? value, {required int min, required int max, String label = 'Поле'}) {
+  static String? range(String? value,
+      {required int min, required int max, String label = 'Поле'}) {
     final parsed = int.tryParse(value?.trim() ?? '');
     if (parsed == null) return '«$label»: введите число';
     if (parsed < min || parsed > max) return '«$label»: от $min до $max';
@@ -53,7 +56,9 @@ class Validators {
   }
 
   static String? phone(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Заполните поле «Телефон»';
+    if (value == null || value.trim().isEmpty) {
+      return 'Заполните поле «Телефон»';
+    }
     final digits = value.replaceAll(RegExp(r'\D'), '');
     if (digits.length < 10 || digits.length > 15) {
       return '«Телефон»: от 10 до 15 цифр';
@@ -62,15 +67,18 @@ class Validators {
   }
 
   static String? sku(String? value) {
-    return required(value, label: 'Артикул') ?? maxLength(value, 32, label: 'Артикул');
+    return required(value, label: 'Артикул') ??
+        maxLength(value, 32, label: 'Артикул');
   }
 
-  static String? name(String? value, {String label = 'Название', int max = 80}) {
+  static String? name(String? value,
+      {String label = 'Название', int max = 80}) {
     return required(value, label: label) ?? maxLength(value, max, label: label);
   }
 
   static String? username(String? value) {
-    return required(value, label: 'Логин') ?? minLength(value, 3, label: 'Логин');
+    return required(value, label: 'Логин') ??
+        minLength(value, 3, label: 'Логин');
   }
 
   static bool passwordHasMinLength(String value) => value.length >= 8;
@@ -81,14 +89,18 @@ class Validators {
       RegExp(r'[^A-Za-z0-9]').hasMatch(value);
 
   static bool passwordIsStrong(String value) =>
-      passwordHasMinLength(value) && passwordHasDigit(value) && passwordHasSpecial(value);
+      passwordHasMinLength(value) &&
+      passwordHasDigit(value) &&
+      passwordHasSpecial(value);
 
   static String? password(String? value) {
     final text = value ?? '';
     if (text.isEmpty) return 'Заполните поле «Пароль»';
     if (!passwordHasMinLength(text)) return 'Пароль: минимум 8 символов';
     if (!passwordHasDigit(text)) return 'Пароль должен содержать цифру';
-    if (!passwordHasSpecial(text)) return 'Пароль должен содержать специальный символ';
+    if (!passwordHasSpecial(text)) {
+      return 'Пароль должен содержать специальный символ';
+    }
     return null;
   }
 }

@@ -18,7 +18,8 @@ class ApiCarModelRepository implements CarModelRepository {
 
   Map<String, dynamic> _query(CarModelQuery query) => {
         if (query.search.trim().isNotEmpty) 'search': query.search.trim(),
-        if (query.maker != null && query.maker!.isNotEmpty) 'maker': query.maker,
+        if (query.maker != null && query.maker!.isNotEmpty)
+          'maker': query.maker,
         'sort': '${query.sortField},${query.sortAscending ? 'asc' : 'desc'}',
         'page': query.page,
         'size': query.size,
@@ -33,7 +34,8 @@ class ApiCarModelRepository implements CarModelRepository {
       };
 
   @override
-  Future<PageResult<CarModel>> find(CarModelQuery query) => _api.find(_query(query));
+  Future<PageResult<CarModel>> find(CarModelQuery query) =>
+      _api.find(_query(query));
 
   @override
   Future<List<CarModel>> getAll({bool includeDeleted = false}) =>
@@ -46,7 +48,8 @@ class ApiCarModelRepository implements CarModelRepository {
   Future<CarModel> create(CarModel model) => _api.create(_body(model));
 
   @override
-  Future<CarModel> update(CarModel model) => _api.update(model.id, _body(model));
+  Future<CarModel> update(CarModel model) =>
+      _api.update(model.id, _body(model));
 
   @override
   Future<void> softDelete(int id) => _api.softDelete(id);

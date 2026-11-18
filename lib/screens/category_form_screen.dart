@@ -54,7 +54,8 @@ class _CategoryFormScreenState extends State<CategoryFormScreen> {
       return;
     }
     try {
-      final item = await context.read<CategoryRepository>().findById(widget.id!);
+      final item =
+          await context.read<CategoryRepository>().findById(widget.id!);
       if (!mounted) return;
       if (item == null) {
         setState(() {
@@ -118,14 +119,16 @@ class _CategoryFormScreenState extends State<CategoryFormScreen> {
           FieldSpec.text(
             label: 'Название',
             controller: _name,
-            validator: (value) => Validators.name(value) ?? _serverErrors['name'],
+            validator: (value) =>
+                Validators.name(value) ?? _serverErrors['name'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
             label: 'Описание',
             controller: _description,
             maxLines: 3,
-            validator: (value) => Validators.maxLength(value, 200, label: 'Описание'),
+            validator: (value) =>
+                Validators.maxLength(value, 200, label: 'Описание'),
             onChanged: _markDirty,
           ),
         ],

@@ -16,23 +16,29 @@ class FilterDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 200,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          isDense: true,
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<T>(
-            isExpanded: true,
-            value: items.any((item) => item.value == value) ? value : null,
-            items: items,
-            onChanged: onChanged,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth =
+            constraints.maxWidth.isFinite ? constraints.maxWidth : 200.0;
+        return SizedBox(
+          width: maxWidth < 200 ? maxWidth : 200,
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: label,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<T>(
+                isExpanded: true,
+                value: items.any((item) => item.value == value) ? value : null,
+                items: items,
+                onChanged: onChanged,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

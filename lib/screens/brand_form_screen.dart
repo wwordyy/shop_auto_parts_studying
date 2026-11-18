@@ -123,14 +123,17 @@ class _BrandFormScreenState extends State<BrandFormScreen> {
           FieldSpec.text(
             label: 'Название',
             controller: _name,
-            validator: (value) => Validators.name(value, label: 'Название') ?? _serverErrors['name'],
+            validator: (value) =>
+                Validators.name(value, label: 'Название') ??
+                _serverErrors['name'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
             label: 'Страна',
             controller: _country,
             validator: (value) =>
-                Validators.name(value, label: 'Страна', max: 40) ?? _serverErrors['country'],
+                Validators.name(value, label: 'Страна', max: 40) ??
+                _serverErrors['country'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
@@ -138,7 +141,8 @@ class _BrandFormScreenState extends State<BrandFormScreen> {
             controller: _foundedYear,
             keyboardType: TextInputType.number,
             validator: (value) =>
-                Validators.range(value, min: 1800, max: currentYear, label: 'Год основания') ??
+                Validators.range(value,
+                    min: 1800, max: currentYear, label: 'Год основания') ??
                 _serverErrors['foundedYear'],
             onChanged: _markDirty,
           ),

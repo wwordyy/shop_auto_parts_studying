@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../core/api_exceptions.dart';
+import '../layout/app_layout.dart';
 
 enum DeleteChoice { cancel, soft, hard }
+
+Widget _constrainDialog(Widget dialog) {
+  return ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: AppLayout.dialogMaxWidth),
+    child: dialog,
+  );
+}
 
 Future<DeleteChoice> confirmDelete(
   BuildContext context,
@@ -11,24 +19,28 @@ Future<DeleteChoice> confirmDelete(
 }) async {
   return await showDialog<DeleteChoice>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Удалить запись?'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, DeleteChoice.cancel),
-              child: const Text('Отмена'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, DeleteChoice.soft),
-              child: Text(allowHard ? 'Логически' : 'Удалить'),
-            ),
-            if (allowHard)
-              FilledButton(
-                onPressed: () => Navigator.pop(context, DeleteChoice.hard),
-                child: const Text('Навсегда'),
+        builder: (context) => _constrainDialog(
+          AlertDialog(
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            title: const Text('Удалить запись?'),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, DeleteChoice.cancel),
+                child: const Text('Отмена'),
               ),
-          ],
+              TextButton(
+                onPressed: () => Navigator.pop(context, DeleteChoice.soft),
+                child: Text(allowHard ? 'Логически' : 'Удалить'),
+              ),
+              if (allowHard)
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, DeleteChoice.hard),
+                  child: const Text('Навсегда'),
+                ),
+            ],
+          ),
         ),
       ) ??
       DeleteChoice.cancel;
@@ -37,19 +49,23 @@ Future<DeleteChoice> confirmDelete(
 Future<bool> confirmRestore(BuildContext context, String name) async {
   return await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Восстановить запись?'),
-          content: Text('«$name» снова появится в списке.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Отмена'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Восстановить'),
-            ),
-          ],
+        builder: (context) => _constrainDialog(
+          AlertDialog(
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            title: const Text('Восстановить запись?'),
+            content: Text('«$name» снова появится в списке.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Отмена'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Восстановить'),
+              ),
+            ],
+          ),
         ),
       ) ??
       false;
@@ -58,19 +74,24 @@ Future<bool> confirmRestore(BuildContext context, String name) async {
 Future<bool> confirmDiscard(BuildContext context) async {
   return await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Уйти без сохранения?'),
-          content: const Text('На форме есть несохранённые изменения. Они будут потеряны.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Остаться'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Уйти'),
-            ),
-          ],
+        builder: (context) => _constrainDialog(
+          AlertDialog(
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            title: const Text('Уйти без сохранения?'),
+            content: const Text(
+                'На форме есть несохранённые изменения. Они будут потеряны.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Остаться'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Уйти'),
+              ),
+            ],
+          ),
         ),
       ) ??
       false;
@@ -80,10 +101,11 @@ void showSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
-Future<void> runMutation(BuildContext context, Future<void> Function() action) async {
+Future<void> runMutation(
+    BuildContext context, Future<void> Function() action) async {
   try {
     await action();
-  }   on ApiException catch (error) {
+  } on ApiException catch (error) {
     if (!context.mounted) return;
     final title = switch (error) {
       ForbiddenException() => 'Недостаточно прав',
@@ -98,15 +120,18 @@ Future<void> runMutation(BuildContext context, Future<void> Function() action) a
 Future<void> showInfo(BuildContext context, String title, String message) {
   return showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: Text(message),
-      actions: [
-        FilledButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Понятно'),
-        ),
-      ],
+    builder: (context) => _constrainDialog(
+      AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Понятно'),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -119,7 +144,10 @@ List<Widget> crudActions({
   bool canEdit = true,
   bool canDeleteOrRestore = true,
 }) {
-  Widget button({required VoidCallback onPressed, required IconData icon, required String tooltip}) {
+  Widget button(
+      {required VoidCallback onPressed,
+      required IconData icon,
+      required String tooltip}) {
     return IconButton(
       onPressed: onPressed,
       tooltip: tooltip,
@@ -131,7 +159,8 @@ List<Widget> crudActions({
   }
 
   return [
-    button(onPressed: onView, icon: Icons.visibility_outlined, tooltip: 'Открыть'),
+    button(
+        onPressed: onView, icon: Icons.visibility_outlined, tooltip: 'Открыть'),
     if (canEdit && !isDeleted)
       button(onPressed: onEdit, icon: Icons.edit_outlined, tooltip: 'Изменить'),
     if (canDeleteOrRestore)

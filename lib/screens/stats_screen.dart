@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../layout/app_layout.dart';
 import '../repositories/brand_repository.dart';
 import '../repositories/car_model_repository.dart';
 import '../repositories/category_repository.dart';
@@ -79,7 +80,12 @@ class _StatsScreenState extends State<StatsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   Text(value, style: Theme.of(context).textTheme.headlineSmall),
                 ],
               ),
@@ -92,6 +98,16 @@ class _StatsScreenState extends State<StatsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final columns = AppLayout.of(context).statsColumns;
+    final cards = [
+      _card('Запчасти в каталоге', '$_parts', Icons.build),
+      _card('Логически удалённые запчасти', '$_deletedParts',
+          Icons.delete_outline),
+      _card('Бренды', '$_brands', Icons.factory),
+      _card('Категории', '$_categories', Icons.category),
+      _card('Автомобили', '$_cars', Icons.directions_car),
+      _card('Клиенты', '$_customers', Icons.people),
+    ];
     return LoadStateView(
       status: _status,
       error: _error,
@@ -101,14 +117,26 @@ class _StatsScreenState extends State<StatsScreen> {
         children: [
           Text('Статистика', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
-          const Text('Сводка по каталогу. Экран доступен только администратору.'),
+          const Text(
+              'Сводка по каталогу. Экран доступен только администратору.'),
           const SizedBox(height: 16),
-          _card('Запчасти в каталоге', '$_parts', Icons.build),
-          _card('Логически удалённые запчасти', '$_deletedParts', Icons.delete_outline),
-          _card('Бренды', '$_brands', Icons.factory),
-          _card('Категории', '$_categories', Icons.category),
-          _card('Автомобили', '$_cars', Icons.directions_car),
-          _card('Клиенты', '$_customers', Icons.people),
+          for (var row = 0; row < (cards.length / columns).ceil(); row++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var col = 0; col < columns; col++) ...[
+                    if (col > 0) const SizedBox(width: 12),
+                    Expanded(
+                      child: row * columns + col < cards.length
+                          ? cards[row * columns + col]
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../state/auth_notifier.dart';
 import 'api_exceptions.dart';
 import 'config.dart';
+import 'connectivity_monitor.dart';
 
 bool isAuthPath(String path) {
   return path.contains('/auth/login') ||
@@ -12,7 +13,7 @@ bool isAuthPath(String path) {
       path.contains('/auth/logout');
 }
 
-Dio buildDio({AuthNotifier? auth}) {
+Dio buildDio({AuthNotifier? auth, ConnectivityMonitor? connectivity}) {
   late final Dio dio;
   dio = Dio(
     BaseOptions(
@@ -43,9 +44,11 @@ Dio buildDio({AuthNotifier? auth}) {
         return handler.next(options);
       },
       onResponse: (response, handler) {
+        connectivity?.markOnline();
         final status = response.statusCode ?? 0;
         if (kDebugMode) {
-          debugPrint('[API] ← $status ${response.requestOptions.method} ${response.requestOptions.uri}');
+          debugPrint(
+              '[API] ← $status ${response.requestOptions.method} ${response.requestOptions.uri}');
         }
         if (status >= 400) {
           return handler.reject(
@@ -61,6 +64,9 @@ Dio buildDio({AuthNotifier? auth}) {
         return handler.next(response);
       },
       onError: (error, handler) async {
+        if (ConnectivityMonitor.isNetworkError(error)) {
+          connectivity?.markOffline();
+        }
         if (kDebugMode) {
           debugPrint('[API] сбой ${error.requestOptions.uri}: ${error.type}');
         }

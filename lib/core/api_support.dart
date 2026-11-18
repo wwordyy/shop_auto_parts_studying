@@ -136,7 +136,8 @@ class ApiResource<T> {
 
   Future<int> deleteMany(List<int> ids) {
     return guard(() async {
-      final response = await _dio.post<dynamic>('$path/bulk-delete', data: {'ids': ids});
+      final response =
+          await _dio.post<dynamic>('$path/bulk-delete', data: {'ids': ids});
       invalidateCache();
       return (asJsonMap(response.data)['deleted'] as num?)?.toInt() ?? 0;
     });

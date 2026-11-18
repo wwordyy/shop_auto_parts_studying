@@ -16,7 +16,8 @@ import '../utils/load_status.dart';
 import '../utils/page_result.dart';
 
 class ListNotifier<T, Q> extends ChangeNotifier {
-  ListNotifier(this._repository, {required int Function(T) idOf, required Q initialQuery})
+  ListNotifier(this._repository,
+      {required int Function(T) idOf, required Q initialQuery})
       : _idOf = idOf,
         _query = initialQuery;
 

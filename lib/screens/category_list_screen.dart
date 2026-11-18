@@ -6,10 +6,12 @@ import '../models/category.dart';
 import '../queries/category_query.dart';
 import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
+import '../widgets/adaptive_collection.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
-import '../widgets/entity_card_list.dart';
+import '../widgets/ellipsis_text.dart';
 import '../widgets/entity_table.dart';
+import '../widgets/list_toolbar.dart';
 import '../widgets/load_state_view.dart';
 import '../widgets/pagination_bar.dart';
 
@@ -27,7 +29,9 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<CategoryListNotifier>().applyQuery(widget.query);
+      if (mounted) {
+        context.read<CategoryListNotifier>().applyQuery(widget.query);
+      }
     });
   }
 
@@ -41,7 +45,10 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
 
   void _go(CategoryQuery query) {
     final params = query.toParams();
-    context.go(Uri(path: '/categories', queryParameters: params.isEmpty ? null : params).toString());
+    context.go(Uri(
+            path: '/categories',
+            queryParameters: params.isEmpty ? null : params)
+        .toString());
   }
 
   Future<void> _delete(Category item) async {
@@ -68,7 +75,8 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
     );
     if (!mounted) return;
     if (choice == DeleteChoice.cancel) return;
-    await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
+    await runMutation(context,
+        () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
   }
 
   List<Widget> _actions(Category item) {
@@ -79,7 +87,8 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
       onEdit: () => context.go('/categories/${item.id}/edit'),
       isDeleted: item.isDeleted,
       canEdit: perms.canMutate,
-      canDeleteOrRestore: item.isDeleted ? perms.canRestore : perms.canSoftDelete,
+      canDeleteOrRestore:
+          item.isDeleted ? perms.canRestore : perms.canSoftDelete,
       onDeleteOrRestore: item.isDeleted
           ? () async {
               if (await confirmRestore(context, item.name) && mounted) {
@@ -95,65 +104,33 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
     final notifier = context.watch<CategoryListNotifier>();
     final perms = context.watch<AuthNotifier>().permissions;
     final query = widget.query;
-    final wide = MediaQuery.sizeOf(context).width >= 600;
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: DebouncedSearchField(
-                      value: query.search,
-                      hintText: 'Поиск по названию или описанию',
-                      onChanged: (value) => _go(query.copyWith(search: value)),
-                    ),
-                  ),
-                  if (perms.canMutate) ...[
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: () => context.go('/categories/new'),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Добавить'),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (perms.canViewDeleted)
-                    FilterChip(
-                      label: const Text('Показать удалённые'),
-                      selected: query.includeDeleted,
-                      onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
-                    ),
-                  TextButton(
-                    onPressed: () => _go(const CategoryQuery()),
-                    child: const Text('Сбросить'),
-                  ),
-                ],
-              ),
-              if (notifier.hasSelection && perms.canSoftDelete)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    children: [
-                      Text('Выбрано: ${notifier.selected.length}'),
-                      const Spacer(),
-                      TextButton(onPressed: _deleteSelected, child: const Text('Удалить выбранные')),
-                    ],
-                  ),
-                ),
-            ],
+        ListToolbar(
+          search: DebouncedSearchField(
+            value: query.search,
+            hintText: 'Поиск по названию или описанию',
+            onChanged: (value) => _go(query.copyWith(search: value)),
           ),
+          onAdd: perms.canMutate ? () => context.go('/categories/new') : null,
+          filters: [
+            if (perms.canViewDeleted)
+              FilterChip(
+                label: const Text('Показать удалённые'),
+                selected: query.includeDeleted,
+                onSelected: (value) =>
+                    _go(query.copyWith(includeDeleted: value)),
+              ),
+            TextButton(
+              onPressed: () => _go(const CategoryQuery()),
+              child: const Text('Сбросить'),
+            ),
+          ],
+          selectionBar: notifier.hasSelection && perms.canSoftDelete
+              ? SelectionBar(
+                  count: notifier.selected.length, onDelete: _deleteSelected)
+              : null,
         ),
         Expanded(
           child: Padding(
@@ -163,38 +140,39 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
               error: notifier.error,
               isEmpty: notifier.result.items.isEmpty,
               onRetry: notifier.load,
-              child: wide
-                  ? EntityTable<Category>(
-                      items: notifier.result.items,
-                      idOf: (item) => item.id,
-                      selected: notifier.selected,
-                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
-                      onSelectAll: perms.canSoftDelete ? notifier.selectAllOnPage : null,
-                      sortField: query.sortField,
-                      sortAscending: query.sortAscending,
-                      onSort: (field) => _go(
-                        query.copyWith(
-                          sortField: field,
-                          sortAscending: field == query.sortField ? !query.sortAscending : true,
-                        ),
-                      ),
-                      columns: [
-                        TableColumnSpec(label: 'Название', sortField: 'name', build: (item) => Text(item.name)),
-                        TableColumnSpec(label: 'Описание', build: (item) => Text(item.description)),
-                      ],
-                      actions: _actions,
-                    )
-                  : EntityCardList<Category>(
-                      items: notifier.result.items,
-                      idOf: (item) => item.id,
-                      selected: notifier.selected,
-                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
-                      titleOf: (item) => item.name,
-                      subtitleOf: (item) => item.description,
-                      isDeleted: (item) => item.isDeleted,
-                      onOpen: (item) => context.go('/categories/${item.id}'),
-                      actions: _actions,
-                    ),
+              child: AdaptiveCollection<Category>(
+                items: notifier.result.items,
+                idOf: (item) => item.id,
+                selected: notifier.selected,
+                onToggleSelect:
+                    perms.canSoftDelete ? notifier.toggleSelection : null,
+                onSelectAll:
+                    perms.canSoftDelete ? notifier.selectAllOnPage : null,
+                sortField: query.sortField,
+                sortAscending: query.sortAscending,
+                onSort: (field) => _go(
+                  query.copyWith(
+                    sortField: field,
+                    sortAscending:
+                        field == query.sortField ? !query.sortAscending : true,
+                  ),
+                ),
+                columns: [
+                  TableColumnSpec(
+                      label: 'Название',
+                      sortField: 'name',
+                      build: (item) => EllipsisText(item.name)),
+                  TableColumnSpec(
+                      label: 'Описание',
+                      build: (item) =>
+                          EllipsisText(item.description, maxLines: 2)),
+                ],
+                actions: _actions,
+                titleOf: (item) => item.name,
+                subtitleOf: (item) => item.description,
+                isDeleted: (item) => item.isDeleted,
+                onOpen: (item) => context.go('/categories/${item.id}'),
+              ),
             ),
           ),
         ),

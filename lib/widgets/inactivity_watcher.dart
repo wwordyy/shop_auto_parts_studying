@@ -104,6 +104,8 @@ class _InactivityWatcherState extends State<InactivityWatcher> {
                 child: Material(
                   color: Colors.transparent,
                   child: AlertDialog(
+                    insetPadding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 24),
                     title: const Text('Сессия скоро завершится'),
                     content: Text(
                       'Вы будете выведены из системы через ${widget.warningBefore.inSeconds} секунд из-за бездействия.',

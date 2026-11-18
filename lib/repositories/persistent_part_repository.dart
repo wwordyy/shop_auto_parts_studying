@@ -18,8 +18,8 @@ class PersistentPartRepository implements PartRepository {
           toJson: (item) => item.toJson(),
           idOf: (item) => item.id,
           isDeleted: (item) => item.isDeleted,
-          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) =>
-              item.copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
+          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) => item
+              .copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
           status: status,
         );
 
@@ -33,17 +33,22 @@ class PersistentPartRepository implements PartRepository {
       final needle = query.search.trim().toLowerCase();
       rows = rows
           .where((part) =>
-              part.name.toLowerCase().contains(needle) || part.sku.toLowerCase().contains(needle))
+              part.name.toLowerCase().contains(needle) ||
+              part.sku.toLowerCase().contains(needle))
           .toList();
     }
     if (query.categoryId != null) {
-      rows = rows.where((part) => part.categoryIds.contains(query.categoryId)).toList();
+      rows = rows
+          .where((part) => part.categoryIds.contains(query.categoryId))
+          .toList();
     }
     if (query.brandId != null) {
       rows = rows.where((part) => part.brandId == query.brandId).toList();
     }
     if (query.carModelId != null) {
-      rows = rows.where((part) => part.carModelIds.contains(query.carModelId)).toList();
+      rows = rows
+          .where((part) => part.carModelIds.contains(query.carModelId))
+          .toList();
     }
     if (query.yearFrom != null) {
       rows = rows.where((part) => part.year >= query.yearFrom!).toList();
@@ -71,11 +76,12 @@ class PersistentPartRepository implements PartRepository {
   Future<AutoPart?> findById(int id) async => _store.byId(id);
 
   @override
-  Future<AutoPart> create(AutoPart part) => _store.add(part.copyWith(id: _store.nextId));
+  Future<AutoPart> create(AutoPart part) =>
+      _store.add(part.copyWith(id: _store.nextId));
 
   @override
-  Future<AutoPart> update(AutoPart part) =>
-      _store.replace(part.id, (current) => part.copyWith(deletedAt: current.deletedAt));
+  Future<AutoPart> update(AutoPart part) => _store.replace(
+      part.id, (current) => part.copyWith(deletedAt: current.deletedAt));
 
   @override
   Future<void> softDelete(int id) => _store.softDelete(id);
@@ -92,7 +98,8 @@ class PersistentPartRepository implements PartRepository {
   @override
   Future<bool> skuExists(String sku, {int? exceptId}) async {
     final needle = sku.trim().toLowerCase();
-    return _store.items.any((part) => part.sku.toLowerCase() == needle && part.id != exceptId);
+    return _store.items
+        .any((part) => part.sku.toLowerCase() == needle && part.id != exceptId);
   }
 
   @override
@@ -106,7 +113,8 @@ class PersistentPartRepository implements PartRepository {
       if (current.stockAvailable < quantity) {
         throw StateError('Нет доступного остатка для продажи');
       }
-      return current.copyWith(stockAvailable: current.stockAvailable - quantity);
+      return current.copyWith(
+          stockAvailable: current.stockAvailable - quantity);
     });
   }
 }

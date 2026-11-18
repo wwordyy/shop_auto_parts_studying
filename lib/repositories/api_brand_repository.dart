@@ -18,7 +18,8 @@ class ApiBrandRepository implements BrandRepository {
 
   Map<String, dynamic> _query(BrandQuery query) => {
         if (query.search.trim().isNotEmpty) 'search': query.search.trim(),
-        if (query.country != null && query.country!.isNotEmpty) 'country': query.country,
+        if (query.country != null && query.country!.isNotEmpty)
+          'country': query.country,
         'sort': '${query.sortField},${query.sortAscending ? 'asc' : 'desc'}',
         'page': query.page,
         'size': query.size,

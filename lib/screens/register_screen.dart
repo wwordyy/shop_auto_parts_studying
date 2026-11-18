@@ -95,13 +95,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Регистрация', style: Theme.of(context).textTheme.headlineSmall),
+                    Text('Регистрация',
+                        style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 8),
                     const Text('Новый аккаунт получает роль покупателя.'),
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _username,
-                      validator: (value) => Validators.username(value) ?? _serverErrors['username'],
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.username],
+                      validator: (value) =>
+                          Validators.username(value) ??
+                          _serverErrors['username'],
                       decoration: const InputDecoration(
                         labelText: 'Логин',
                         border: OutlineInputBorder(),
@@ -110,7 +115,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _fullName,
-                      validator: (value) => Validators.name(value, label: 'ФИО'),
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.name],
+                      validator: (value) =>
+                          Validators.name(value, label: 'ФИО'),
                       decoration: const InputDecoration(
                         labelText: 'ФИО',
                         border: OutlineInputBorder(),
@@ -119,10 +127,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _email,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.email],
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) return _serverErrors['email'];
-                        return Validators.email(value) ?? _serverErrors['email'];
+                        if (value == null || value.trim().isEmpty) {
+                          return _serverErrors['email'];
+                        }
+                        return Validators.email(value) ??
+                            _serverErrors['email'];
                       },
                       decoration: const InputDecoration(
                         labelText: 'Email (необязательно)',
@@ -133,28 +146,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextFormField(
                       controller: _password,
                       obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.newPassword],
+                      onFieldSubmitted: (_) => _submit(),
                       onChanged: (_) => setState(() {}),
-                      validator: (value) => Validators.password(value) ?? _serverErrors['password'],
+                      validator: (value) =>
+                          Validators.password(value) ??
+                          _serverErrors['password'],
                       decoration: const InputDecoration(
                         labelText: 'Пароль',
                         border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _rule(Validators.passwordHasMinLength(password), 'Не менее 8 символов'),
+                    _rule(Validators.passwordHasMinLength(password),
+                        'Не менее 8 символов'),
                     _rule(Validators.passwordHasDigit(password), 'Есть цифра'),
-                    _rule(Validators.passwordHasSpecial(password), 'Есть специальный символ'),
+                    _rule(Validators.passwordHasSpecial(password),
+                        'Есть специальный символ'),
                     if (_error != null) ...[
                       const SizedBox(height: 16),
                       Text(
                         _error!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error),
                       ),
                     ],
                     const SizedBox(height: 24),
                     FilledButton(
                       onPressed: _submitting ? null : _submit,
-                      child: Text(_submitting ? 'Создание…' : 'Зарегистрироваться'),
+                      child: Text(
+                          _submitting ? 'Создание…' : 'Зарегистрироваться'),
                     ),
                     const SizedBox(height: 8),
                     TextButton(

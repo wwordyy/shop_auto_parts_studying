@@ -11,7 +11,8 @@ class StorageStatus {
   void markReset(String key) {
     resetHappened = true;
     final previous = _prefs.getString(noticeKey) ?? '';
-    final line = 'Ключ $key: данные старого формата сброшены к начальному набору.';
+    final line =
+        'Ключ $key: данные старого формата сброшены к начальному набору.';
     _prefs.setString(noticeKey, previous.isEmpty ? line : '$previous\n$line');
   }
 

@@ -18,8 +18,8 @@ class PersistentCustomerRepository implements CustomerRepository {
           toJson: (item) => item.toJson(),
           idOf: (item) => item.id,
           isDeleted: (item) => item.isDeleted,
-          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) =>
-              item.copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
+          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) => item
+              .copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
           status: status,
         );
 
@@ -57,11 +57,12 @@ class PersistentCustomerRepository implements CustomerRepository {
   Future<Customer?> findById(int id) async => _store.byId(id);
 
   @override
-  Future<Customer> create(Customer customer) => _store.add(customer.copyWith(id: _store.nextId));
+  Future<Customer> create(Customer customer) =>
+      _store.add(customer.copyWith(id: _store.nextId));
 
   @override
-  Future<Customer> update(Customer customer) =>
-      _store.replace(customer.id, (current) => customer.copyWith(deletedAt: current.deletedAt));
+  Future<Customer> update(Customer customer) => _store.replace(customer.id,
+      (current) => customer.copyWith(deletedAt: current.deletedAt));
 
   @override
   Future<void> softDelete(int id) => _store.softDelete(id);
@@ -78,6 +79,7 @@ class PersistentCustomerRepository implements CustomerRepository {
   @override
   Future<bool> emailExists(String email, {int? exceptId}) async {
     final needle = email.trim().toLowerCase();
-    return _store.items.any((item) => item.email.toLowerCase() == needle && item.id != exceptId);
+    return _store.items.any(
+        (item) => item.email.toLowerCase() == needle && item.id != exceptId);
   }
 }

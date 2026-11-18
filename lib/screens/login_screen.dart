@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
           constraints: const BoxConstraints(maxWidth: 420),
           child: Card(
             margin: const EdgeInsets.all(24),
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Form(
                 key: _formKey,
@@ -70,12 +70,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Вход', style: Theme.of(context).textTheme.headlineSmall),
+                    Text('Вход',
+                        style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 8),
                     const Text('Магазин автозапчастей'),
                     if (widget.from != null && widget.from!.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      const Text('После входа вы вернётесь на запрошенную страницу.'),
+                      const Text(
+                          'После входа вы вернётесь на запрошенную страницу.'),
                     ],
                     const SizedBox(height: 24),
                     TextFormField(
@@ -94,7 +96,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscureText: true,
                       onFieldSubmitted: (_) => _submit(),
                       autofillHints: const [AutofillHints.password],
-                      validator: (value) => Validators.required(value, label: 'Пароль'),
+                      validator: (value) =>
+                          Validators.required(value, label: 'Пароль'),
                       decoration: const InputDecoration(
                         labelText: 'Пароль',
                         border: OutlineInputBorder(),
@@ -104,7 +107,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       Text(
                         _error!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error),
                       ),
                     ],
                     const SizedBox(height: 24),

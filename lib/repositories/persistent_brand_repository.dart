@@ -18,8 +18,8 @@ class PersistentBrandRepository implements BrandRepository {
           toJson: (item) => item.toJson(),
           idOf: (item) => item.id,
           isDeleted: (item) => item.isDeleted,
-          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) =>
-              item.copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
+          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) => item
+              .copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
           status: status,
         );
 
@@ -59,11 +59,12 @@ class PersistentBrandRepository implements BrandRepository {
   Future<Brand?> findById(int id) async => _store.byId(id);
 
   @override
-  Future<Brand> create(Brand brand) => _store.add(brand.copyWith(id: _store.nextId));
+  Future<Brand> create(Brand brand) =>
+      _store.add(brand.copyWith(id: _store.nextId));
 
   @override
-  Future<Brand> update(Brand brand) =>
-      _store.replace(brand.id, (current) => brand.copyWith(deletedAt: current.deletedAt));
+  Future<Brand> update(Brand brand) => _store.replace(
+      brand.id, (current) => brand.copyWith(deletedAt: current.deletedAt));
 
   @override
   Future<void> softDelete(int id) => _store.softDelete(id);

@@ -1,11 +1,11 @@
 {
-    "name": "shop_auto_parts",
-    "short_name": "shop_auto_parts",
+    "name": "Магазин автозапчастей",
+    "short_name": "Автозапчасти",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#E65100",
+    "theme_color": "#E65100",
+    "description": "Клиент магазина автозапчастей",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

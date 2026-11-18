@@ -8,11 +8,13 @@ import '../queries/brand_query.dart';
 import '../repositories/brand_repository.dart';
 import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
+import '../widgets/adaptive_collection.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
-import '../widgets/entity_card_list.dart';
+import '../widgets/ellipsis_text.dart';
 import '../widgets/entity_table.dart';
 import '../widgets/filter_dropdown.dart';
+import '../widgets/list_toolbar.dart';
 import '../widgets/load_state_view.dart';
 import '../widgets/pagination_bar.dart';
 
@@ -46,14 +48,18 @@ class _BrandListScreenState extends State<BrandListScreen> {
   }
 
   Future<void> _loadCountries() async {
-    final brands = await context.read<BrandRepository>().getAll(includeDeleted: true);
+    final brands =
+        await context.read<BrandRepository>().getAll(includeDeleted: true);
     if (!mounted) return;
-    setState(() => _countries = uniqueSorted(brands.map((item) => item.country)));
+    setState(
+        () => _countries = uniqueSorted(brands.map((item) => item.country)));
   }
 
   void _go(BrandQuery query) {
     final params = query.toParams();
-    context.go(Uri(path: '/brands', queryParameters: params.isEmpty ? null : params).toString());
+    context.go(
+        Uri(path: '/brands', queryParameters: params.isEmpty ? null : params)
+            .toString());
   }
 
   Future<void> _delete(Brand brand) async {
@@ -78,7 +84,8 @@ class _BrandListScreenState extends State<BrandListScreen> {
       allowHard: context.read<AuthNotifier>().permissions.canHardDelete,
     );
     if (!mounted || choice == DeleteChoice.cancel) return;
-    await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
+    await runMutation(context,
+        () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
   }
 
   List<Widget> _actions(Brand brand) {
@@ -89,7 +96,8 @@ class _BrandListScreenState extends State<BrandListScreen> {
       onEdit: () => context.go('/brands/${brand.id}/edit'),
       isDeleted: brand.isDeleted,
       canEdit: perms.canMutate,
-      canDeleteOrRestore: brand.isDeleted ? perms.canRestore : perms.canSoftDelete,
+      canDeleteOrRestore:
+          brand.isDeleted ? perms.canRestore : perms.canSoftDelete,
       onDeleteOrRestore: brand.isDeleted
           ? () async {
               if (await confirmRestore(context, brand.name) && mounted) {
@@ -105,75 +113,43 @@ class _BrandListScreenState extends State<BrandListScreen> {
     final notifier = context.watch<BrandListNotifier>();
     final perms = context.watch<AuthNotifier>().permissions;
     final query = widget.query;
-    final wide = MediaQuery.sizeOf(context).width >= 600;
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: DebouncedSearchField(
-                      value: query.search,
-                      hintText: 'Поиск по названию или стране',
-                      onChanged: (value) => _go(query.copyWith(search: value)),
-                    ),
-                  ),
-                  if (perms.canMutate) ...[
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: () => context.go('/brands/new'),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Добавить'),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  FilterDropdown<String?>(
-                    label: 'Страна',
-                    value: query.country,
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Все')),
-                      for (final country in _countries)
-                        DropdownMenuItem(value: country, child: Text(country)),
-                    ],
-                    onChanged: (value) => _go(query.copyWith(country: value)),
-                  ),
-                  if (perms.canViewDeleted)
-                    FilterChip(
-                      label: const Text('Показать удалённые'),
-                      selected: query.includeDeleted,
-                      onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
-                    ),
-                  TextButton(
-                    onPressed: () => _go(const BrandQuery()),
-                    child: const Text('Сбросить'),
-                  ),
-                ],
-              ),
-              if (notifier.hasSelection && perms.canSoftDelete)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    children: [
-                      Text('Выбрано: ${notifier.selected.length}'),
-                      const Spacer(),
-                      TextButton(onPressed: _deleteSelected, child: const Text('Удалить выбранные')),
-                    ],
-                  ),
-                ),
-            ],
+        ListToolbar(
+          search: DebouncedSearchField(
+            value: query.search,
+            hintText: 'Поиск по названию или стране',
+            onChanged: (value) => _go(query.copyWith(search: value)),
           ),
+          onAdd: perms.canMutate ? () => context.go('/brands/new') : null,
+          filters: [
+            FilterDropdown<String?>(
+              label: 'Страна',
+              value: query.country,
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Все')),
+                for (final country in _countries)
+                  DropdownMenuItem(value: country, child: Text(country)),
+              ],
+              onChanged: (value) => _go(query.copyWith(country: value)),
+            ),
+            if (perms.canViewDeleted)
+              FilterChip(
+                label: const Text('Показать удалённые'),
+                selected: query.includeDeleted,
+                onSelected: (value) =>
+                    _go(query.copyWith(includeDeleted: value)),
+              ),
+            TextButton(
+              onPressed: () => _go(const BrandQuery()),
+              child: const Text('Сбросить'),
+            ),
+          ],
+          selectionBar: notifier.hasSelection && perms.canSoftDelete
+              ? SelectionBar(
+                  count: notifier.selected.length, onDelete: _deleteSelected)
+              : null,
         ),
         Expanded(
           child: Padding(
@@ -183,44 +159,45 @@ class _BrandListScreenState extends State<BrandListScreen> {
               error: notifier.error,
               isEmpty: notifier.result.items.isEmpty,
               onRetry: notifier.load,
-              child: wide
-                  ? EntityTable<Brand>(
-                      items: notifier.result.items,
-                      idOf: (b) => b.id,
-                      selected: notifier.selected,
-                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
-                      onSelectAll: perms.canSoftDelete ? notifier.selectAllOnPage : null,
-                      sortField: query.sortField,
-                      sortAscending: query.sortAscending,
-                      onSort: (field) => _go(
-                        query.copyWith(
-                          sortField: field,
-                          sortAscending: field == query.sortField ? !query.sortAscending : true,
-                        ),
-                      ),
-                      columns: [
-                        TableColumnSpec(label: 'Название', sortField: 'name', build: (b) => Text(b.name)),
-                        TableColumnSpec(label: 'Страна', sortField: 'country', build: (b) => Text(b.country)),
-                        TableColumnSpec(
-                          label: 'Год основания',
-                          sortField: 'foundedYear',
-                          numeric: true,
-                          build: (b) => Text('${b.foundedYear}'),
-                        ),
-                      ],
-                      actions: _actions,
-                    )
-                  : EntityCardList<Brand>(
-                      items: notifier.result.items,
-                      idOf: (b) => b.id,
-                      selected: notifier.selected,
-                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
-                      titleOf: (b) => b.name,
-                      subtitleOf: (b) => '${b.country} · ${b.foundedYear}',
-                      isDeleted: (b) => b.isDeleted,
-                      onOpen: (b) => context.go('/brands/${b.id}'),
-                      actions: _actions,
-                    ),
+              child: AdaptiveCollection<Brand>(
+                items: notifier.result.items,
+                idOf: (b) => b.id,
+                selected: notifier.selected,
+                onToggleSelect:
+                    perms.canSoftDelete ? notifier.toggleSelection : null,
+                onSelectAll:
+                    perms.canSoftDelete ? notifier.selectAllOnPage : null,
+                sortField: query.sortField,
+                sortAscending: query.sortAscending,
+                onSort: (field) => _go(
+                  query.copyWith(
+                    sortField: field,
+                    sortAscending:
+                        field == query.sortField ? !query.sortAscending : true,
+                  ),
+                ),
+                columns: [
+                  TableColumnSpec(
+                      label: 'Название',
+                      sortField: 'name',
+                      build: (b) => EllipsisText(b.name)),
+                  TableColumnSpec(
+                      label: 'Страна',
+                      sortField: 'country',
+                      build: (b) => EllipsisText(b.country)),
+                  TableColumnSpec(
+                    label: 'Год основания',
+                    sortField: 'foundedYear',
+                    numeric: true,
+                    build: (b) => Text('${b.foundedYear}'),
+                  ),
+                ],
+                actions: _actions,
+                titleOf: (b) => b.name,
+                subtitleOf: (b) => '${b.country} · ${b.foundedYear}',
+                isDeleted: (b) => b.isDeleted,
+                onOpen: (b) => context.go('/brands/${b.id}'),
+              ),
             ),
           ),
         ),

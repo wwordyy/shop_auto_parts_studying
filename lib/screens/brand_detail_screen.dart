@@ -97,9 +97,14 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                 });
               },
               fields: [
-                ListTile(title: const Text('Страна'), subtitle: Text(brand.country)),
-                ListTile(title: const Text('Год основания'), subtitle: Text('${brand.foundedYear}')),
-                ListTile(title: const Text('Связанные запчасти'), subtitle: Text('$_partsCount')),
+                ListTile(
+                    title: const Text('Страна'), subtitle: Text(brand.country)),
+                ListTile(
+                    title: const Text('Год основания'),
+                    subtitle: Text('${brand.foundedYear}')),
+                ListTile(
+                    title: const Text('Связанные запчасти'),
+                    subtitle: Text('$_partsCount')),
               ],
             ),
     );

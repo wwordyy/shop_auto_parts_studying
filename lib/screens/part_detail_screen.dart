@@ -62,8 +62,10 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
       setState(() {
         _part = part;
         _brandName = brand?.name ?? '—';
-        _categories = joinNames(part.categoryIds, {for (final item in categories) item.id: item.name});
-        _cars = joinNames(part.carModelIds, {for (final item in cars) item.id: item.title});
+        _categories = joinNames(part.categoryIds,
+            {for (final item in categories) item.id: item.name});
+        _cars = joinNames(
+            part.carModelIds, {for (final item in cars) item.id: item.title});
         _status = LoadStatus.success;
       });
     } catch (e) {
@@ -121,7 +123,9 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
                         ? null
                         : () async {
                             await runMutation(context, () async {
-                              await context.read<PartRepository>().sell(part.id);
+                              await context
+                                  .read<PartRepository>()
+                                  .sell(part.id);
                               await notifier.load();
                               await _load();
                             });
@@ -131,13 +135,25 @@ class _PartDetailScreenState extends State<PartDetailScreen> {
                   ),
               ],
               fields: [
-                ListTile(title: const Text('Артикул'), subtitle: Text(part.sku)),
-                ListTile(title: const Text('Год'), subtitle: Text('${part.year}')),
-                ListTile(title: const Text('Цена'), subtitle: Text('${part.price} ₽')),
-                ListTile(title: const Text('Склад'), subtitle: Text('${part.stockAvailable} из ${part.stockTotal}')),
-                ListTile(title: const Text('Бренд'), subtitle: Text(_brandName)),
-                ListTile(title: const Text('Категории'), subtitle: Text(_categories)),
-                ListTile(title: const Text('Совместимые автомобили'), subtitle: Text(_cars)),
+                ListTile(
+                    title: const Text('Артикул'), subtitle: Text(part.sku)),
+                ListTile(
+                    title: const Text('Год'), subtitle: Text('${part.year}')),
+                ListTile(
+                    title: const Text('Цена'),
+                    subtitle: Text('${part.price} ₽')),
+                ListTile(
+                    title: const Text('Склад'),
+                    subtitle:
+                        Text('${part.stockAvailable} из ${part.stockTotal}')),
+                ListTile(
+                    title: const Text('Бренд'), subtitle: Text(_brandName)),
+                ListTile(
+                    title: const Text('Категории'),
+                    subtitle: Text(_categories)),
+                ListTile(
+                    title: const Text('Совместимые автомобили'),
+                    subtitle: Text(_cars)),
               ],
             ),
     );

@@ -13,7 +13,8 @@ class LocalCollection<T> {
     required Map<String, dynamic> Function(T) toJson,
     required int Function(T) idOf,
     required bool Function(T) isDeleted,
-    required T Function(T item, {DateTime? deletedAt, bool clearDeletedAt}) copyDeleted,
+    required T Function(T item, {DateTime? deletedAt, bool clearDeletedAt})
+        copyDeleted,
     StorageStatus? status,
   })  : _prefs = prefs,
         _key = key,
@@ -34,7 +35,8 @@ class LocalCollection<T> {
   final Map<String, dynamic> Function(T) _toJson;
   final int Function(T) _idOf;
   final bool Function(T) _isDeleted;
-  final T Function(T item, {DateTime? deletedAt, bool clearDeletedAt}) _copyDeleted;
+  final T Function(T item, {DateTime? deletedAt, bool clearDeletedAt})
+      _copyDeleted;
   final StorageStatus? _status;
 
   List<T> items = [];
@@ -48,7 +50,9 @@ class LocalCollection<T> {
     }
     try {
       final list = jsonDecode(raw) as List;
-      items = list.map((item) => _fromJson(Map<String, dynamic>.from(item as Map))).toList();
+      items = list
+          .map((item) => _fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList();
     } catch (_) {
       items = [..._seed];
       _status?.markReset(_key);
@@ -97,7 +101,10 @@ class LocalCollection<T> {
   }
 
   Future<void> softDelete(int id) async {
-    await replace(id, (item) => _copyDeleted(item, deletedAt: DateTime.now(), clearDeletedAt: false));
+    await replace(
+        id,
+        (item) => _copyDeleted(item,
+            deletedAt: DateTime.now(), clearDeletedAt: false));
   }
 
   Future<void> restore(int id) async {
@@ -112,9 +119,11 @@ class LocalCollection<T> {
   Future<int> deleteMany(List<int> ids) async {
     var count = 0;
     for (final id in ids) {
-      final index = items.indexWhere((item) => _idOf(item) == id && !_isDeleted(item));
+      final index =
+          items.indexWhere((item) => _idOf(item) == id && !_isDeleted(item));
       if (index != -1) {
-        items[index] = _copyDeleted(items[index], deletedAt: DateTime.now(), clearDeletedAt: false);
+        items[index] = _copyDeleted(items[index],
+            deletedAt: DateTime.now(), clearDeletedAt: false);
         count++;
       }
     }

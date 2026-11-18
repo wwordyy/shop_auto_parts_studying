@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'core/api_client.dart';
 import 'core/auth_api.dart';
+import 'core/connectivity_monitor.dart';
 import 'state/auth_notifier.dart';
 
 void main() async {
@@ -12,8 +13,9 @@ void main() async {
   usePathUrlStrategy();
   final prefs = await SharedPreferences.getInstance();
   final auth = AuthNotifier(prefs);
-  final dio = buildDio(auth: auth);
+  final connectivity = ConnectivityMonitor()..attach();
+  final dio = buildDio(auth: auth, connectivity: connectivity);
   auth.attachApi(AuthApi(dio));
   await auth.restore();
-  runApp(ShopApp(dio: dio, auth: auth));
+  runApp(ShopApp(dio: dio, auth: auth, connectivity: connectivity));
 }

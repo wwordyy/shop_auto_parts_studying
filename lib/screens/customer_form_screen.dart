@@ -62,7 +62,8 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
       return;
     }
     try {
-      final item = await context.read<CustomerRepository>().findById(widget.id!);
+      final item =
+          await context.read<CustomerRepository>().findById(widget.id!);
       if (!mounted) return;
       if (item == null) {
         setState(() {
@@ -106,7 +107,9 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     );
     setState(() => _saving = true);
     try {
-      widget.isEditing ? await repo.update(customer) : await repo.create(customer);
+      widget.isEditing
+          ? await repo.update(customer)
+          : await repo.create(customer);
       if (!mounted) return;
       await notifier.load();
       if (!mounted) return;
@@ -139,14 +142,16 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
             label: 'ФИО',
             controller: _fullName,
             validator: (value) =>
-                Validators.name(value, label: 'ФИО', max: 80) ?? _serverErrors['fullName'],
+                Validators.name(value, label: 'ФИО', max: 80) ??
+                _serverErrors['fullName'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
             label: 'Email',
             controller: _email,
             keyboardType: TextInputType.emailAddress,
-            validator: (value) => Validators.email(value) ?? _serverErrors['email'],
+            validator: (value) =>
+                Validators.email(value) ?? _serverErrors['email'],
             onChanged: (_) {
               _serverErrors.remove('email');
               _markDirty();
@@ -180,7 +185,8 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
             label: 'Скидка, %',
             controller: _discount,
             keyboardType: TextInputType.number,
-            validator: (value) => Validators.range(value, min: 0, max: 50, label: 'Скидка'),
+            validator: (value) =>
+                Validators.range(value, min: 0, max: 50, label: 'Скидка'),
             onChanged: _markDirty,
           ),
           FieldSpec.toggle(

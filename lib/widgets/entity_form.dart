@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../layout/app_layout.dart';
 import 'app_dialogs.dart';
 
 enum FieldKind { text, dropdown, chips, date, toggle, header }
@@ -158,7 +159,9 @@ class FieldSpec {
           ),
         );
       case FieldKind.dropdown:
-        final value = dropdownItems.any((item) => item.value == dropdownValue) ? dropdownValue : null;
+        final value = dropdownItems.any((item) => item.value == dropdownValue)
+            ? dropdownValue
+            : null;
         return DropdownButtonFormField<int>(
           value: value,
           items: dropdownItems,
@@ -171,7 +174,8 @@ class FieldSpec {
         );
       case FieldKind.chips:
         return FormField<List<int>>(
-          key: ValueKey('$label-${chipOptions.map((option) => option.id).join(',')}'),
+          key: ValueKey(
+              '$label-${chipOptions.map((option) => option.id).join(',')}'),
           initialValue: chipValue,
           validator: listValidator,
           builder: (field) {
@@ -196,7 +200,9 @@ class FieldSpec {
                             selected: field.value!.contains(option.id),
                             onSelected: (_) {
                               final next = [...field.value!];
-                              next.contains(option.id) ? next.remove(option.id) : next.add(option.id);
+                              next.contains(option.id)
+                                  ? next.remove(option.id)
+                                  : next.add(option.id);
                               field.didChange(next);
                               onChips?.call(next);
                             },
@@ -277,38 +283,53 @@ class EntityFormScaffold extends StatelessWidget {
         final discard = await confirmDiscard(context);
         if (discard && context.mounted) context.pop();
       },
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Row(
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppLayout.formMaxWidth),
+          child: ListView(
+            padding: const EdgeInsets.all(24),
             children: [
-              IconButton(onPressed: () => _leave(context), icon: const Icon(Icons.arrow_back)),
-              Expanded(
-                child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Назад',
+                    onPressed: () => _leave(context),
+                    icon: const Icon(Icons.arrow_back),
+                  ),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final field in fields) ...[
+                      field.build(context),
+                      const SizedBox(height: 16),
+                    ],
+                    ...extra,
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: saving ? null : onSave,
+                      icon: const Icon(Icons.save_outlined),
+                      label: Text(saving ? 'Сохранение…' : 'Сохранить'),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Form(
-            key: formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final field in fields) ...[
-                  field.build(context),
-                  const SizedBox(height: 16),
-                ],
-                ...extra,
-                const SizedBox(height: 8),
-                FilledButton.icon(
-                  onPressed: saving ? null : onSave,
-                  icon: const Icon(Icons.save_outlined),
-                  label: Text(saving ? 'Сохранение…' : 'Сохранить'),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

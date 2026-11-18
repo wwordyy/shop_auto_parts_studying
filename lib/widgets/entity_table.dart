@@ -61,14 +61,16 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final headingStyle = theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600);
+    final headingStyle =
+        theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600);
     final showCheckbox = widget.onToggleSelect != null;
     final showActions = widget.actions != null;
     final columnCount =
         (showCheckbox ? 1 : 0) + widget.columns.length + (showActions ? 1 : 0);
 
     final allSelected = widget.items.isNotEmpty &&
-        widget.items.every((item) => widget.selected.contains(widget.idOf(item)));
+        widget.items
+            .every((item) => widget.selected.contains(widget.idOf(item)));
     final someSelected =
         widget.items.any((item) => widget.selected.contains(widget.idOf(item)));
 
@@ -77,9 +79,11 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
         final minWidth = (showCheckbox ? 56.0 : 0) +
             widget.columns.length * 140.0 +
             (showActions ? 168.0 : 0);
-        final parentWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : minWidth;
+        final parentWidth =
+            constraints.maxWidth.isFinite ? constraints.maxWidth : minWidth;
         final tableWidth = math.max(parentWidth, minWidth);
-        final divider = BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5));
+        final divider =
+            BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5));
 
         Widget cell({
           required Widget child,
@@ -87,8 +91,16 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
           bool heading = false,
         }) {
           return Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: heading ? 14 : 8),
-            child: Align(alignment: alignment, child: child),
+            padding: EdgeInsets.symmetric(
+                horizontal: 16, vertical: heading ? 14 : 8),
+            child: Align(
+              alignment: alignment,
+              child: DefaultTextStyle.merge(
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                child: child,
+              ),
+            ),
           );
         }
 
@@ -114,15 +126,20 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
                     : () => widget.onSort!(spec.sortField!),
                 child: cell(
                   heading: true,
-                  alignment: spec.numeric ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: spec.numeric
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(spec.label, style: headingStyle),
-                      if (spec.sortField != null && spec.sortField == widget.sortField) ...[
+                      if (spec.sortField != null &&
+                          spec.sortField == widget.sortField) ...[
                         const SizedBox(width: 4),
                         Icon(
-                          widget.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                          widget.sortAscending
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward,
                           size: 16,
                         ),
                       ],
@@ -152,7 +169,8 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
                     alignment: Alignment.center,
                     child: Checkbox(
                       value: widget.selected.contains(widget.idOf(item)),
-                      onChanged: (_) => widget.onToggleSelect!(widget.idOf(item)),
+                      onChanged: (_) =>
+                          widget.onToggleSelect!(widget.idOf(item)),
                     ),
                   ),
                 for (final spec in widget.columns)
@@ -161,13 +179,16 @@ class _EntityTableState<T> extends State<EntityTable<T>> {
                         ? null
                         : () => widget.onToggleSelect!(widget.idOf(item)),
                     child: cell(
-                      alignment: spec.numeric ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: spec.numeric
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
                       child: spec.build(item),
                     ),
                   ),
                 if (showActions)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,

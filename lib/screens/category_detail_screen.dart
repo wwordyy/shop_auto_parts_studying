@@ -36,7 +36,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
       _error = null;
     });
     try {
-      final item = await context.read<CategoryListNotifier>().findById(widget.id);
+      final item =
+          await context.read<CategoryListNotifier>().findById(widget.id);
       setState(() {
         _item = item;
         _status = item == null ? LoadStatus.error : LoadStatus.success;
@@ -93,7 +94,8 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
               fields: [
                 ListTile(
                   title: const Text('Описание'),
-                  subtitle: Text(item.description.isEmpty ? '—' : item.description),
+                  subtitle:
+                      Text(item.description.isEmpty ? '—' : item.description),
                 ),
               ],
             ),

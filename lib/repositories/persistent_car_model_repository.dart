@@ -18,8 +18,8 @@ class PersistentCarModelRepository implements CarModelRepository {
           toJson: (item) => item.toJson(),
           idOf: (item) => item.id,
           isDeleted: (item) => item.isDeleted,
-          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) =>
-              item.copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
+          copyDeleted: (item, {deletedAt, clearDeletedAt = false}) => item
+              .copyWith(deletedAt: deletedAt, clearDeletedAt: clearDeletedAt),
           status: status,
         );
 
@@ -33,7 +33,8 @@ class PersistentCarModelRepository implements CarModelRepository {
       final needle = query.search.trim().toLowerCase();
       rows = rows
           .where((item) =>
-              item.name.toLowerCase().contains(needle) || item.maker.toLowerCase().contains(needle))
+              item.name.toLowerCase().contains(needle) ||
+              item.maker.toLowerCase().contains(needle))
           .toList();
     }
     if (query.maker != null && query.maker!.isNotEmpty) {
@@ -58,11 +59,12 @@ class PersistentCarModelRepository implements CarModelRepository {
   Future<CarModel?> findById(int id) async => _store.byId(id);
 
   @override
-  Future<CarModel> create(CarModel model) => _store.add(model.copyWith(id: _store.nextId));
+  Future<CarModel> create(CarModel model) =>
+      _store.add(model.copyWith(id: _store.nextId));
 
   @override
-  Future<CarModel> update(CarModel model) =>
-      _store.replace(model.id, (current) => model.copyWith(deletedAt: current.deletedAt));
+  Future<CarModel> update(CarModel model) => _store.replace(
+      model.id, (current) => model.copyWith(deletedAt: current.deletedAt));
 
   @override
   Future<void> softDelete(int id) => _store.softDelete(id);

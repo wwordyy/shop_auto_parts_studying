@@ -8,11 +8,13 @@ import '../queries/car_model_query.dart';
 import '../repositories/car_model_repository.dart';
 import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
+import '../widgets/adaptive_collection.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
-import '../widgets/entity_card_list.dart';
+import '../widgets/ellipsis_text.dart';
 import '../widgets/entity_table.dart';
 import '../widgets/filter_dropdown.dart';
+import '../widgets/list_toolbar.dart';
 import '../widgets/load_state_view.dart';
 import '../widgets/pagination_bar.dart';
 
@@ -32,7 +34,9 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<CarModelListNotifier>().applyQuery(widget.query);
+      if (mounted) {
+        context.read<CarModelListNotifier>().applyQuery(widget.query);
+      }
     });
     _loadMakers();
   }
@@ -46,14 +50,17 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
   }
 
   Future<void> _loadMakers() async {
-    final items = await context.read<CarModelRepository>().getAll(includeDeleted: true);
+    final items =
+        await context.read<CarModelRepository>().getAll(includeDeleted: true);
     if (!mounted) return;
     setState(() => _makers = uniqueSorted(items.map((item) => item.maker)));
   }
 
   void _go(CarModelQuery query) {
     final params = query.toParams();
-    context.go(Uri(path: '/cars', queryParameters: params.isEmpty ? null : params).toString());
+    context.go(
+        Uri(path: '/cars', queryParameters: params.isEmpty ? null : params)
+            .toString());
   }
 
   Future<void> _delete(CarModel item) async {
@@ -80,7 +87,8 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
     );
     if (!mounted) return;
     if (choice == DeleteChoice.cancel) return;
-    await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
+    await runMutation(context,
+        () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
   }
 
   List<Widget> _actions(CarModel item) {
@@ -91,7 +99,8 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
       onEdit: () => context.go('/cars/${item.id}/edit'),
       isDeleted: item.isDeleted,
       canEdit: perms.canMutate,
-      canDeleteOrRestore: item.isDeleted ? perms.canRestore : perms.canSoftDelete,
+      canDeleteOrRestore:
+          item.isDeleted ? perms.canRestore : perms.canSoftDelete,
       onDeleteOrRestore: item.isDeleted
           ? () async {
               if (await confirmRestore(context, item.title) && mounted) {
@@ -107,75 +116,43 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
     final notifier = context.watch<CarModelListNotifier>();
     final perms = context.watch<AuthNotifier>().permissions;
     final query = widget.query;
-    final wide = MediaQuery.sizeOf(context).width >= 600;
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: DebouncedSearchField(
-                      value: query.search,
-                      hintText: 'Поиск по марке или модели',
-                      onChanged: (value) => _go(query.copyWith(search: value)),
-                    ),
-                  ),
-                  if (perms.canMutate) ...[
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: () => context.go('/cars/new'),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Добавить'),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  FilterDropdown<String?>(
-                    label: 'Марка',
-                    value: query.maker,
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Все')),
-                      for (final maker in _makers)
-                        DropdownMenuItem(value: maker, child: Text(maker)),
-                    ],
-                    onChanged: (value) => _go(query.copyWith(maker: value)),
-                  ),
-                  if (perms.canViewDeleted)
-                    FilterChip(
-                      label: const Text('Показать удалённые'),
-                      selected: query.includeDeleted,
-                      onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
-                    ),
-                  TextButton(
-                    onPressed: () => _go(const CarModelQuery()),
-                    child: const Text('Сбросить'),
-                  ),
-                ],
-              ),
-              if (notifier.hasSelection && perms.canSoftDelete)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    children: [
-                      Text('Выбрано: ${notifier.selected.length}'),
-                      const Spacer(),
-                      TextButton(onPressed: _deleteSelected, child: const Text('Удалить выбранные')),
-                    ],
-                  ),
-                ),
-            ],
+        ListToolbar(
+          search: DebouncedSearchField(
+            value: query.search,
+            hintText: 'Поиск по марке или модели',
+            onChanged: (value) => _go(query.copyWith(search: value)),
           ),
+          onAdd: perms.canMutate ? () => context.go('/cars/new') : null,
+          filters: [
+            FilterDropdown<String?>(
+              label: 'Марка',
+              value: query.maker,
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Все')),
+                for (final maker in _makers)
+                  DropdownMenuItem(value: maker, child: Text(maker)),
+              ],
+              onChanged: (value) => _go(query.copyWith(maker: value)),
+            ),
+            if (perms.canViewDeleted)
+              FilterChip(
+                label: const Text('Показать удалённые'),
+                selected: query.includeDeleted,
+                onSelected: (value) =>
+                    _go(query.copyWith(includeDeleted: value)),
+              ),
+            TextButton(
+              onPressed: () => _go(const CarModelQuery()),
+              child: const Text('Сбросить'),
+            ),
+          ],
+          selectionBar: notifier.hasSelection && perms.canSoftDelete
+              ? SelectionBar(
+                  count: notifier.selected.length, onDelete: _deleteSelected)
+              : null,
         ),
         Expanded(
           child: Padding(
@@ -185,44 +162,45 @@ class _CarModelListScreenState extends State<CarModelListScreen> {
               error: notifier.error,
               isEmpty: notifier.result.items.isEmpty,
               onRetry: notifier.load,
-              child: wide
-                  ? EntityTable<CarModel>(
-                      items: notifier.result.items,
-                      idOf: (item) => item.id,
-                      selected: notifier.selected,
-                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
-                      onSelectAll: perms.canSoftDelete ? notifier.selectAllOnPage : null,
-                      sortField: query.sortField,
-                      sortAscending: query.sortAscending,
-                      onSort: (field) => _go(
-                        query.copyWith(
-                          sortField: field,
-                          sortAscending: field == query.sortField ? !query.sortAscending : true,
-                        ),
-                      ),
-                      columns: [
-                        TableColumnSpec(label: 'Марка', sortField: 'maker', build: (item) => Text(item.maker)),
-                        TableColumnSpec(label: 'Модель', sortField: 'name', build: (item) => Text(item.name)),
-                        TableColumnSpec(
-                          label: 'Годы',
-                          sortField: 'yearFrom',
-                          numeric: true,
-                          build: (item) => Text('${item.yearFrom}–${item.yearTo}'),
-                        ),
-                      ],
-                      actions: _actions,
-                    )
-                  : EntityCardList<CarModel>(
-                      items: notifier.result.items,
-                      idOf: (item) => item.id,
-                      selected: notifier.selected,
-                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
-                      titleOf: (item) => item.title,
-                      subtitleOf: (item) => '${item.yearFrom}–${item.yearTo}',
-                      isDeleted: (item) => item.isDeleted,
-                      onOpen: (item) => context.go('/cars/${item.id}'),
-                      actions: _actions,
-                    ),
+              child: AdaptiveCollection<CarModel>(
+                items: notifier.result.items,
+                idOf: (item) => item.id,
+                selected: notifier.selected,
+                onToggleSelect:
+                    perms.canSoftDelete ? notifier.toggleSelection : null,
+                onSelectAll:
+                    perms.canSoftDelete ? notifier.selectAllOnPage : null,
+                sortField: query.sortField,
+                sortAscending: query.sortAscending,
+                onSort: (field) => _go(
+                  query.copyWith(
+                    sortField: field,
+                    sortAscending:
+                        field == query.sortField ? !query.sortAscending : true,
+                  ),
+                ),
+                columns: [
+                  TableColumnSpec(
+                      label: 'Марка',
+                      sortField: 'maker',
+                      build: (item) => EllipsisText(item.maker)),
+                  TableColumnSpec(
+                      label: 'Модель',
+                      sortField: 'name',
+                      build: (item) => EllipsisText(item.name)),
+                  TableColumnSpec(
+                    label: 'Годы',
+                    sortField: 'yearFrom',
+                    numeric: true,
+                    build: (item) => Text('${item.yearFrom}–${item.yearTo}'),
+                  ),
+                ],
+                actions: _actions,
+                titleOf: (item) => item.title,
+                subtitleOf: (item) => '${item.yearFrom}–${item.yearTo}',
+                isDeleted: (item) => item.isDeleted,
+                onOpen: (item) => context.go('/cars/${item.id}'),
+              ),
             ),
           ),
         ),

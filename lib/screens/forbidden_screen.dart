@@ -22,11 +22,11 @@ class ForbiddenScreen extends StatelessWidget {
                   color: Theme.of(context).colorScheme.error,
                 ),
                 const SizedBox(height: 16),
-                Text('Недостаточно прав', style: Theme.of(context).textTheme.headlineSmall),
+                Text('Недостаточно прав',
+                    style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 const Text(
-                  'Этот экран недоступен вашей роли. '
-                  ,
+                  'Этот экран недоступен вашей роли.',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),

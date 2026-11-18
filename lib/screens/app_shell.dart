@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/permissions.dart';
+import '../layout/app_layout.dart';
 import '../state/auth_notifier.dart';
+import '../widgets/ellipsis_text.dart';
 
 class _Tab {
   final String path;
@@ -114,26 +116,39 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthNotifier>();
     final perms = auth.permissions;
-    final tabs = [for (final tab in _tabs) if (tab.visible(perms)) tab];
+    final tabs = [
+      for (final tab in _tabs)
+        if (tab.visible(perms)) tab
+    ];
     final path = GoRouterState.of(context).uri.path;
     final index = _indexOf(path, tabs);
-    final wide = MediaQuery.sizeOf(context).width >= 900;
+    final layout = AppLayout.of(context);
     final user = auth.user;
-
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         title: const Text('Магазин автозапчастей'),
         actions: [
           if (user != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Center(
-                child: Text(
-                  '${user.displayName} · ${user.role.label}',
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
+            layout.isCompact
+                ? Tooltip(
+                    message: '${user.displayName} · ${user.role.label}',
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(Icons.person_outline),
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 280),
+                        child: EllipsisText(
+                          '${user.displayName} · ${user.role.label}',
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ),
+                  ),
           IconButton(
             tooltip: 'Выйти',
             onPressed: () => auth.logout(),
@@ -141,18 +156,28 @@ class AppShell extends StatelessWidget {
           ),
         ],
       ),
-      body: wide
+      body: layout.useSideNav
           ? Row(
               children: [
                 NavigationRail(
                   selectedIndex: index,
-                  onDestinationSelected: (value) => context.go(tabs[value].path),
-                  labelType: NavigationRailLabelType.all,
+                  onDestinationSelected: (value) =>
+                      context.go(tabs[value].path),
+                  extended: layout.sideNavExtended,
+                  labelType: layout.sideNavExtended
+                      ? NavigationRailLabelType.none
+                      : NavigationRailLabelType.selected,
                   destinations: [
                     for (final tab in tabs)
                       NavigationRailDestination(
-                        icon: tab.destination.icon,
-                        selectedIcon: tab.destination.selectedIcon,
+                        icon: Tooltip(
+                            message: tab.destination.label,
+                            child: tab.destination.icon),
+                        selectedIcon: Tooltip(
+                          message: tab.destination.label,
+                          child: tab.destination.selectedIcon ??
+                              tab.destination.icon,
+                        ),
                         label: Text(tab.destination.label),
                       ),
                   ],
@@ -162,13 +187,27 @@ class AppShell extends StatelessWidget {
               ],
             )
           : child,
-      bottomNavigationBar: wide
-          ? null
-          : NavigationBar(
+      bottomNavigationBar: layout.useBottomNav
+          ? NavigationBar(
               selectedIndex: index,
               onDestinationSelected: (value) => context.go(tabs[value].path),
+              labelBehavior:
+                  NavigationDestinationLabelBehavior.onlyShowSelected,
               destinations: [for (final tab in tabs) tab.destination],
-            ),
+            )
+          : null,
+    );
+
+    if (!layout.isUltrawide) return scaffold;
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Center(
+        child: ConstrainedBox(
+          constraints:
+              const BoxConstraints(maxWidth: AppLayout.maxContentWidth),
+          child: scaffold,
+        ),
+      ),
     );
   }
 }

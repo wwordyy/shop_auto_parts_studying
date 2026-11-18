@@ -32,7 +32,8 @@ class ApiCustomerRepository implements CustomerRepository {
       };
 
   @override
-  Future<PageResult<Customer>> find(CustomerQuery query) => _api.find(_query(query));
+  Future<PageResult<Customer>> find(CustomerQuery query) =>
+      _api.find(_query(query));
 
   @override
   Future<List<Customer>> getAll({bool includeDeleted = false}) =>
@@ -45,7 +46,8 @@ class ApiCustomerRepository implements CustomerRepository {
   Future<Customer> create(Customer customer) => _api.create(_body(customer));
 
   @override
-  Future<Customer> update(Customer customer) => _api.update(customer.id, _body(customer));
+  Future<Customer> update(Customer customer) =>
+      _api.update(customer.id, _body(customer));
 
   @override
   Future<void> softDelete(int id) => _api.softDelete(id);
@@ -67,6 +69,7 @@ class ApiCustomerRepository implements CustomerRepository {
       'page': 1,
     });
     final needle = email.trim().toLowerCase();
-    return page.items.any((item) => item.email.toLowerCase() == needle && item.id != exceptId);
+    return page.items.any(
+        (item) => item.email.toLowerCase() == needle && item.id != exceptId);
   }
 }

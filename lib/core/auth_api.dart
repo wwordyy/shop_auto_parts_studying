@@ -7,7 +7,8 @@ import 'api_support.dart';
 import 'config.dart';
 
 class AuthApi {
-  AuthApi(this._dio, {Dio? refreshClient}) : _refreshClient = refreshClient ?? _plainClient();
+  AuthApi(this._dio, {Dio? refreshClient})
+      : _refreshClient = refreshClient ?? _plainClient();
 
   final Dio _dio;
   final Dio _refreshClient;

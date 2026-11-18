@@ -21,7 +21,8 @@ class PageResult<T> {
         size = 10,
         total = 0;
 
-  factory PageResult.fromList(List<T> rows, {required int page, required int size}) {
+  factory PageResult.fromList(List<T> rows,
+      {required int page, required int size}) {
     final total = rows.length;
     final from = (page - 1) * size;
     final to = from + size > total ? total : from + size;

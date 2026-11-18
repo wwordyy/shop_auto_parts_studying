@@ -26,7 +26,12 @@ class LoadStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (status == LoadStatus.loading || status == LoadStatus.idle) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Semantics(
+          label: 'Загрузка',
+          child: const CircularProgressIndicator(),
+        ),
+      );
     }
 
     if (status == LoadStatus.error) {

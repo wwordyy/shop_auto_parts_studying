@@ -58,7 +58,8 @@ class _CarModelFormScreenState extends State<CarModelFormScreen> {
       return;
     }
     try {
-      final item = await context.read<CarModelRepository>().findById(widget.id!);
+      final item =
+          await context.read<CarModelRepository>().findById(widget.id!);
       if (!mounted) return;
       if (item == null) {
         setState(() {
@@ -128,20 +129,24 @@ class _CarModelFormScreenState extends State<CarModelFormScreen> {
             label: 'Марка',
             controller: _maker,
             validator: (value) =>
-                Validators.name(value, label: 'Марка', max: 40) ?? _serverErrors['maker'],
+                Validators.name(value, label: 'Марка', max: 40) ??
+                _serverErrors['maker'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
             label: 'Модель',
             controller: _name,
-            validator: (value) => Validators.name(value, label: 'Модель') ?? _serverErrors['name'],
+            validator: (value) =>
+                Validators.name(value, label: 'Модель') ??
+                _serverErrors['name'],
             onChanged: _markDirty,
           ),
           FieldSpec.text(
             label: 'Год с',
             controller: _yearFrom,
             keyboardType: TextInputType.number,
-            validator: (value) => Validators.range(value, min: 1980, max: currentYear + 1, label: 'Год с'),
+            validator: (value) => Validators.range(value,
+                min: 1980, max: currentYear + 1, label: 'Год с'),
             onChanged: _markDirty,
           ),
           FieldSpec.text(
@@ -149,7 +154,8 @@ class _CarModelFormScreenState extends State<CarModelFormScreen> {
             controller: _yearTo,
             keyboardType: TextInputType.number,
             validator: (value) {
-              final base = Validators.range(value, min: 1980, max: currentYear + 1, label: 'Год по');
+              final base = Validators.range(value,
+                  min: 1980, max: currentYear + 1, label: 'Год по');
               if (base != null) return base;
               final from = int.tryParse(_yearFrom.text.trim()) ?? 0;
               final to = int.parse(value!.trim());

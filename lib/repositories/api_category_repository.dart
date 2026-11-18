@@ -30,7 +30,8 @@ class ApiCategoryRepository implements CategoryRepository {
       };
 
   @override
-  Future<PageResult<Category>> find(CategoryQuery query) => _api.find(_query(query));
+  Future<PageResult<Category>> find(CategoryQuery query) =>
+      _api.find(_query(query));
 
   @override
   Future<List<Category>> getAll({bool includeDeleted = false}) =>
@@ -43,7 +44,8 @@ class ApiCategoryRepository implements CategoryRepository {
   Future<Category> create(Category category) => _api.create(_body(category));
 
   @override
-  Future<Category> update(Category category) => _api.update(category.id, _body(category));
+  Future<Category> update(Category category) =>
+      _api.update(category.id, _body(category));
 
   @override
   Future<void> softDelete(int id) => _api.softDelete(id);

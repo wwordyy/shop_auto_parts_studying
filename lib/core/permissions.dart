@@ -9,8 +9,7 @@ class Permissions {
 
   bool get isAuthenticated => role != null;
 
-  bool hasAtLeast(Role minimum) =>
-      role != null && role!.level >= minimum.level;
+  bool hasAtLeast(Role minimum) => role != null && role!.level >= minimum.level;
 
   bool get canViewCatalog => isAuthenticated;
 
@@ -37,7 +36,9 @@ class Permissions {
   bool get canAccessCabinet => role == Role.buyer;
 
   bool canOpen(String path) {
-    if (path.startsWith('/login') || path.startsWith('/register') || path == '/forbidden') {
+    if (path.startsWith('/login') ||
+        path.startsWith('/register') ||
+        path == '/forbidden') {
       return true;
     }
     if (!isAuthenticated) return false;

@@ -18,7 +18,8 @@ void main() {
       expect(perms.canOpen('/admin/users'), isFalse);
     });
 
-    test('менеджер управляет каталогом и клиентами, но не удаляет навсегда', () {
+    test('менеджер управляет каталогом и клиентами, но не удаляет навсегда',
+        () {
       const perms = Permissions(Role.manager);
       expect(perms.canMutate, isTrue);
       expect(perms.canSell, isTrue);
@@ -54,7 +55,8 @@ void main() {
       expect(perms.canOpen('/categories/new'), isFalse);
     });
 
-    test('неаутентифицированный пользователь не открывает внутренние экраны', () {
+    test('неаутентифицированный пользователь не открывает внутренние экраны',
+        () {
       const perms = Permissions(null);
       expect(perms.canViewCatalog, isFalse);
       expect(perms.canOpen('/parts'), isFalse);

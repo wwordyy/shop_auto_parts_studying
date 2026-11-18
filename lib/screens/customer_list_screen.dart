@@ -6,10 +6,12 @@ import '../models/customer.dart';
 import '../queries/customer_query.dart';
 import '../state/auth_notifier.dart';
 import '../state/list_notifier.dart';
+import '../widgets/adaptive_collection.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/debounced_search_field.dart';
-import '../widgets/entity_card_list.dart';
+import '../widgets/ellipsis_text.dart';
 import '../widgets/entity_table.dart';
+import '../widgets/list_toolbar.dart';
 import '../widgets/load_state_view.dart';
 import '../widgets/pagination_bar.dart';
 
@@ -27,7 +29,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<CustomerListNotifier>().applyQuery(widget.query);
+      if (mounted) {
+        context.read<CustomerListNotifier>().applyQuery(widget.query);
+      }
     });
   }
 
@@ -41,7 +45,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
   void _go(CustomerQuery query) {
     final params = query.toParams();
-    context.go(Uri(path: '/customers', queryParameters: params.isEmpty ? null : params).toString());
+    context.go(
+        Uri(path: '/customers', queryParameters: params.isEmpty ? null : params)
+            .toString());
   }
 
   Future<void> _delete(Customer item) async {
@@ -68,7 +74,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     );
     if (!mounted) return;
     if (choice == DeleteChoice.cancel) return;
-    await runMutation(context, () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
+    await runMutation(context,
+        () => notifier.deleteSelected(hard: choice == DeleteChoice.hard));
   }
 
   List<Widget> _actions(Customer item) {
@@ -79,7 +86,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       onEdit: () => context.go('/customers/${item.id}/edit'),
       isDeleted: item.isDeleted,
       canEdit: perms.canMutate,
-      canDeleteOrRestore: item.isDeleted ? perms.canRestore : perms.canSoftDelete,
+      canDeleteOrRestore:
+          item.isDeleted ? perms.canRestore : perms.canSoftDelete,
       onDeleteOrRestore: item.isDeleted
           ? () async {
               if (await confirmRestore(context, item.fullName) && mounted) {
@@ -95,65 +103,33 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     final notifier = context.watch<CustomerListNotifier>();
     final perms = context.watch<AuthNotifier>().permissions;
     final query = widget.query;
-    final wide = MediaQuery.sizeOf(context).width >= 600;
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: DebouncedSearchField(
-                      value: query.search,
-                      hintText: 'Поиск по ФИО, email или телефону',
-                      onChanged: (value) => _go(query.copyWith(search: value)),
-                    ),
-                  ),
-                  if (perms.canMutate) ...[
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: () => context.go('/customers/new'),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Добавить'),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (perms.canViewDeleted)
-                    FilterChip(
-                      label: const Text('Показать удалённые'),
-                      selected: query.includeDeleted,
-                      onSelected: (value) => _go(query.copyWith(includeDeleted: value)),
-                    ),
-                  TextButton(
-                    onPressed: () => _go(const CustomerQuery()),
-                    child: const Text('Сбросить'),
-                  ),
-                ],
-              ),
-              if (notifier.hasSelection && perms.canSoftDelete)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    children: [
-                      Text('Выбрано: ${notifier.selected.length}'),
-                      const Spacer(),
-                      TextButton(onPressed: _deleteSelected, child: const Text('Удалить выбранные')),
-                    ],
-                  ),
-                ),
-            ],
+        ListToolbar(
+          search: DebouncedSearchField(
+            value: query.search,
+            hintText: 'Поиск по ФИО, email или телефону',
+            onChanged: (value) => _go(query.copyWith(search: value)),
           ),
+          onAdd: perms.canMutate ? () => context.go('/customers/new') : null,
+          filters: [
+            if (perms.canViewDeleted)
+              FilterChip(
+                label: const Text('Показать удалённые'),
+                selected: query.includeDeleted,
+                onSelected: (value) =>
+                    _go(query.copyWith(includeDeleted: value)),
+              ),
+            TextButton(
+              onPressed: () => _go(const CustomerQuery()),
+              child: const Text('Сбросить'),
+            ),
+          ],
+          selectionBar: notifier.hasSelection && perms.canSoftDelete
+              ? SelectionBar(
+                  count: notifier.selected.length, onDelete: _deleteSelected)
+              : null,
         ),
         Expanded(
           child: Padding(
@@ -163,40 +139,46 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               error: notifier.error,
               isEmpty: notifier.result.items.isEmpty,
               onRetry: notifier.load,
-              child: wide
-                  ? EntityTable<Customer>(
-                      items: notifier.result.items,
-                      idOf: (item) => item.id,
-                      selected: notifier.selected,
-                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
-                      onSelectAll: perms.canSoftDelete ? notifier.selectAllOnPage : null,
-                      sortField: query.sortField,
-                      sortAscending: query.sortAscending,
-                      onSort: (field) => _go(
-                        query.copyWith(
-                          sortField: field,
-                          sortAscending: field == query.sortField ? !query.sortAscending : true,
-                        ),
-                      ),
-                      columns: [
-                        TableColumnSpec(label: 'ФИО', sortField: 'fullName', build: (item) => Text(item.fullName)),
-                        TableColumnSpec(label: 'Email', sortField: 'email', build: (item) => Text(item.email)),
-                        TableColumnSpec(label: 'Телефон', sortField: 'phone', build: (item) => Text(item.phone)),
-                        TableColumnSpec(label: 'Карта', build: (item) => Text(item.card.number)),
-                      ],
-                      actions: _actions,
-                    )
-                  : EntityCardList<Customer>(
-                      items: notifier.result.items,
-                      idOf: (item) => item.id,
-                      selected: notifier.selected,
-                      onToggleSelect: perms.canSoftDelete ? notifier.toggleSelection : null,
-                      titleOf: (item) => item.fullName,
-                      subtitleOf: (item) => '${item.email} · ${item.card.number}',
-                      isDeleted: (item) => item.isDeleted,
-                      onOpen: (item) => context.go('/customers/${item.id}'),
-                      actions: _actions,
-                    ),
+              child: AdaptiveCollection<Customer>(
+                items: notifier.result.items,
+                idOf: (item) => item.id,
+                selected: notifier.selected,
+                onToggleSelect:
+                    perms.canSoftDelete ? notifier.toggleSelection : null,
+                onSelectAll:
+                    perms.canSoftDelete ? notifier.selectAllOnPage : null,
+                sortField: query.sortField,
+                sortAscending: query.sortAscending,
+                onSort: (field) => _go(
+                  query.copyWith(
+                    sortField: field,
+                    sortAscending:
+                        field == query.sortField ? !query.sortAscending : true,
+                  ),
+                ),
+                columns: [
+                  TableColumnSpec(
+                      label: 'ФИО',
+                      sortField: 'fullName',
+                      build: (item) => EllipsisText(item.fullName)),
+                  TableColumnSpec(
+                      label: 'Email',
+                      sortField: 'email',
+                      build: (item) => EllipsisText(item.email)),
+                  TableColumnSpec(
+                      label: 'Телефон',
+                      sortField: 'phone',
+                      build: (item) => EllipsisText(item.phone)),
+                  TableColumnSpec(
+                      label: 'Карта',
+                      build: (item) => EllipsisText(item.card.number)),
+                ],
+                actions: _actions,
+                titleOf: (item) => item.fullName,
+                subtitleOf: (item) => '${item.email} · ${item.card.number}',
+                isDeleted: (item) => item.isDeleted,
+                onOpen: (item) => context.go('/customers/${item.id}'),
+              ),
             ),
           ),
         ),

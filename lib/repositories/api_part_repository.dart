@@ -45,7 +45,8 @@ class ApiPartRepository implements PartRepository {
       };
 
   @override
-  Future<PageResult<AutoPart>> find(PartQuery query) => _api.find(_query(query));
+  Future<PageResult<AutoPart>> find(PartQuery query) =>
+      _api.find(_query(query));
 
   @override
   Future<List<AutoPart>> getAll({bool includeDeleted = false}) =>
@@ -80,7 +81,8 @@ class ApiPartRepository implements PartRepository {
       'page': 1,
     });
     final needle = sku.trim().toLowerCase();
-    return page.items.any((item) => item.sku.toLowerCase() == needle && item.id != exceptId);
+    return page.items
+        .any((item) => item.sku.toLowerCase() == needle && item.id != exceptId);
   }
 
   @override

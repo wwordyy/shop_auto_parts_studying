@@ -36,7 +36,8 @@ class _CarModelDetailScreenState extends State<CarModelDetailScreen> {
       _error = null;
     });
     try {
-      final item = await context.read<CarModelListNotifier>().findById(widget.id);
+      final item =
+          await context.read<CarModelListNotifier>().findById(widget.id);
       setState(() {
         _item = item;
         _status = item == null ? LoadStatus.error : LoadStatus.success;
@@ -91,9 +92,13 @@ class _CarModelDetailScreenState extends State<CarModelDetailScreen> {
                 });
               },
               fields: [
-                ListTile(title: const Text('Марка'), subtitle: Text(item.maker)),
-                ListTile(title: const Text('Модель'), subtitle: Text(item.name)),
-                ListTile(title: const Text('Годы выпуска'), subtitle: Text('${item.yearFrom}–${item.yearTo}')),
+                ListTile(
+                    title: const Text('Марка'), subtitle: Text(item.maker)),
+                ListTile(
+                    title: const Text('Модель'), subtitle: Text(item.name)),
+                ListTile(
+                    title: const Text('Годы выпуска'),
+                    subtitle: Text('${item.yearFrom}–${item.yearTo}')),
               ],
             ),
     );

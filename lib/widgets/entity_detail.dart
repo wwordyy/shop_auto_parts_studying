@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../layout/app_layout.dart';
 import 'app_dialogs.dart';
+import 'ellipsis_text.dart';
 
 class EntityDetail extends StatelessWidget {
   final String title;
@@ -45,51 +47,75 @@ class EntityDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Row(
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppLayout.formMaxWidth),
+        child: ListView(
+          padding: const EdgeInsets.all(24),
           children: [
-            IconButton(onPressed: () => _back(context), icon: const Icon(Icons.arrow_back)),
-            Expanded(child: Text(title, style: Theme.of(context).textTheme.headlineSmall)),
-            if (showEdit && !isDeleted)
-              IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
+            Row(
+              children: [
+                IconButton(
+                  tooltip: 'Назад',
+                  onPressed: () => _back(context),
+                  icon: const Icon(Icons.arrow_back),
+                ),
+                Expanded(
+                  child: EllipsisText(
+                    title,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    maxLines: 2,
+                  ),
+                ),
+                if (showEdit && !isDeleted)
+                  IconButton(
+                    tooltip: 'Изменить',
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit_outlined),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...fields,
+            if (isDeleted)
+              const ListTile(title: Text('Статус'), subtitle: Text('удалено')),
+            if (extra.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              ...extra,
+            ],
+            const SizedBox(height: 16),
+            if (isDeleted && showRestore)
+              FilledButton.icon(
+                onPressed: () async {
+                  if (!await confirmRestore(context, title) ||
+                      !context.mounted) {
+                    return;
+                  }
+                  await onRestored();
+                },
+                icon: const Icon(Icons.restore),
+                label: const Text('Восстановить'),
+              )
+            else if (!isDeleted && showDelete)
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  if (canDelete != null && !await canDelete!()) return;
+                  if (!context.mounted) return;
+                  final choice = await confirmDelete(
+                    context,
+                    'Запись «$title» будет удалена.',
+                    allowHard: allowHardDelete,
+                  );
+                  if (!context.mounted || choice == DeleteChoice.cancel) return;
+                  await onDeleted(choice == DeleteChoice.hard);
+                },
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Удалить'),
+              ),
           ],
         ),
-        const SizedBox(height: 16),
-        ...fields,
-        if (isDeleted) const ListTile(title: Text('Статус'), subtitle: Text('удалено')),
-        if (extra.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          ...extra,
-        ],
-        const SizedBox(height: 16),
-        if (isDeleted && showRestore)
-          FilledButton.icon(
-            onPressed: () async {
-              if (!await confirmRestore(context, title) || !context.mounted) return;
-              await onRestored();
-            },
-            icon: const Icon(Icons.restore),
-            label: const Text('Восстановить'),
-          )
-        else if (!isDeleted && showDelete)
-          FilledButton.tonalIcon(
-            onPressed: () async {
-              if (canDelete != null && !await canDelete!()) return;
-              if (!context.mounted) return;
-              final choice = await confirmDelete(
-                context,
-                'Запись «$title» будет удалена.',
-                allowHard: allowHardDelete,
-              );
-              if (!context.mounted || choice == DeleteChoice.cancel) return;
-              await onDeleted(choice == DeleteChoice.hard);
-            },
-            icon: const Icon(Icons.delete_outline),
-            label: const Text('Удалить'),
-          ),
-      ],
+      ),
     );
   }
 }
