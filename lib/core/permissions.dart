@@ -32,6 +32,12 @@ class Permissions {
   /// Уникальный экран менеджера: клиенты и карты лояльности.
   bool get canAccessCustomers => role == Role.manager;
 
+  bool get canAccessCards => role == Role.manager;
+
+  bool get canAccessSuppliers => hasAtLeast(Role.manager);
+
+  bool get canAccessOrders => isAuthenticated;
+
   /// Уникальный экран покупателя: личный кабинет.
   bool get canAccessCabinet => role == Role.buyer;
 
@@ -44,6 +50,12 @@ class Permissions {
     if (!isAuthenticated) return false;
     if (path.startsWith('/cabinet')) return canAccessCabinet;
     if (path.startsWith('/customers')) return canAccessCustomers;
+    if (path.startsWith('/cards')) return canAccessCards;
+    if (path.startsWith('/suppliers')) return canAccessSuppliers;
+    if (path.startsWith('/orders')) {
+      if (path.contains('/edit')) return canMutate;
+      return canAccessOrders;
+    }
     if (path.startsWith('/admin/users')) return canManageUsers;
     if (path.startsWith('/admin/stats')) return canViewStats;
     if (_isMutationPath(path)) return canMutate;

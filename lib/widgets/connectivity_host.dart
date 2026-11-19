@@ -45,6 +45,9 @@ class _ConnectivityHostState extends State<ConnectivityHost> {
     context.read<CategoryListNotifier>().load();
     context.read<CarModelListNotifier>().load();
     context.read<CustomerListNotifier>().load();
+    context.read<CardListNotifier>().load();
+    context.read<SupplierListNotifier>().load();
+    context.read<OrderListNotifier>().load();
   }
 
   @override

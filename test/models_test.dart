@@ -3,6 +3,8 @@ import 'package:shop_auto_parts/models/app_user.dart';
 import 'package:shop_auto_parts/models/auto_part.dart';
 import 'package:shop_auto_parts/models/brand.dart';
 import 'package:shop_auto_parts/models/customer.dart';
+import 'package:shop_auto_parts/models/shop_order.dart';
+import 'package:shop_auto_parts/models/supplier.dart';
 
 void main() {
   group('Разбор модели AutoPart', () {
@@ -52,6 +54,51 @@ void main() {
       expect(customer.fullName, 'Иван');
       expect(customer.card.number, '');
       expect(customer.card.active, isTrue);
+    });
+  });
+
+  group('Карта, поставщик и заказ', () {
+    test('карта лояльности читает пустой JSON', () {
+      final card = LoyaltyCard.fromJson(const {});
+      expect(card.number, '');
+      expect(card.active, isTrue);
+      expect(card.discountPercent, 0);
+    });
+
+    test('поставщик заполняет поля из JSON', () {
+      final supplier = Supplier.fromJson({
+        'id': 4,
+        'name': 'АвтоЕвро',
+        'country': 'Россия',
+        'phone': '+74951234567',
+        'rating': 5,
+      });
+      expect(supplier.name, 'АвтоЕвро');
+      expect(supplier.rating, 5);
+      expect(supplier.isDeleted, isFalse);
+    });
+
+    test('заказ считает сумму позиции и подпись статуса', () {
+      final order = ShopOrder.fromJson({
+        'id': 1,
+        'customerId': 2,
+        'customerName': 'Мария',
+        'status': 'paid',
+        'subtotal': 1000,
+        'discountPercent': 10,
+        'total': 900,
+        'items': [
+          {
+            'partId': 3,
+            'name': 'Фильтр',
+            'quantity': 2,
+            'unitPrice': 500,
+          }
+        ],
+      });
+      expect(order.statusLabel, 'Оплачен');
+      expect(order.items.single.lineTotal, 1000);
+      expect(order.total, 900);
     });
   });
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../layout/app_layout.dart';
@@ -73,6 +74,15 @@ class _CabinetScreenState extends State<CabinetScreen> {
               const SizedBox(height: 8),
               const Text(
                   'Раздел только для покупателя: свои данные и карта лояльности.'),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  onPressed: () => context.go('/orders'),
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: const Text('Мои заказы'),
+                ),
+              ),
               const SizedBox(height: 16),
               ListTile(
                   title: const Text('Логин'),

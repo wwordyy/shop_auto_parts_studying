@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Брейкпоинты из ПР6: 360 / 768 / 1280 / 1920.
 class AppLayout {
   static const compact = 768.0;
   static const expanded = 1280.0;

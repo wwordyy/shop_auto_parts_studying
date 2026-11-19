@@ -5,7 +5,12 @@ import '../models/brand.dart';
 import '../models/car_model.dart';
 import '../models/category.dart';
 import '../models/customer.dart';
+import '../models/shop_order.dart';
+import '../models/supplier.dart';
 import '../queries/brand_query.dart';
+import '../queries/card_query.dart';
+import '../queries/order_query.dart';
+import '../queries/supplier_query.dart';
 import '../queries/car_model_query.dart';
 import '../queries/category_query.dart';
 import '../queries/customer_query.dart';
@@ -140,4 +145,19 @@ class CarModelListNotifier extends ListNotifier<CarModel, CarModelQuery> {
 class CustomerListNotifier extends ListNotifier<Customer, CustomerQuery> {
   CustomerListNotifier(super.repository)
       : super(idOf: (item) => item.id, initialQuery: const CustomerQuery());
+}
+
+class CardListNotifier extends ListNotifier<LoyaltyCard, CardQuery> {
+  CardListNotifier(super.repository)
+      : super(idOf: (item) => item.id, initialQuery: const CardQuery());
+}
+
+class SupplierListNotifier extends ListNotifier<Supplier, SupplierQuery> {
+  SupplierListNotifier(super.repository)
+      : super(idOf: (item) => item.id, initialQuery: const SupplierQuery());
+}
+
+class OrderListNotifier extends ListNotifier<ShopOrder, OrderQuery> {
+  OrderListNotifier(super.repository)
+      : super(idOf: (item) => item.id, initialQuery: const OrderQuery());
 }

@@ -94,6 +94,8 @@ function seed() {
     parts: [],
     customers: [],
     cards: [],
+    suppliers: [],
+    orders: [],
     users: [],
     refreshTokens: new Set(),
   };
@@ -189,6 +191,39 @@ function seed() {
       active,
     });
   });
+
+  const Supplier = (name, country, phone, email, rating) =>
+    push('suppliers', { name, country, phone, email, rating });
+  Supplier('АвтоЕвро', 'Россия', '+74951234567', 'sales@avtoeuro.ru', 5);
+  Supplier('Exist.ru', 'Россия', '+74957654321', 'b2b@exist.ru', 4);
+  Supplier('Bosch Service Parts', 'Германия', '+492217900', 'parts@bosch.de', 5);
+  Supplier('Japan Direct', 'Япония', '+8131234567', 'export@japandirect.jp', 4);
+
+  const orderItems = (lines) =>
+    lines.map(([partId, quantity]) => {
+      const part = db.parts.find((item) => item.id === partId);
+      return {
+        partId,
+        name: part.name,
+        sku: part.sku,
+        quantity,
+        unitPrice: part.price,
+      };
+    });
+  const priced = (customerId, lines, status) => {
+    const items = orderItems(lines);
+    const subtotal = items.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+    const card = db.cards.find((item) => item.customerId === customerId && item.active && !item.deletedAt);
+    const discountPercent = card ? card.discountPercent : 0;
+    const total = Math.round((subtotal * (100 - discountPercent)) / 100);
+    return { customerId, status, items, subtotal, discountPercent, total, stockRestored: false };
+  };
+  push('orders', priced(1, [[1, 2], [15, 1]], 'paid'));
+  push('orders', priced(2, [[5, 1]], 'new'));
+  push('orders', priced(5, [[6, 1], [8, 2]], 'cancelled'));
+  for (const order of db.orders) {
+    if (order.status !== 'cancelled') applyOrderStock(null, order);
+  }
 
   push('users', {
     username: 'admin',
@@ -293,12 +328,35 @@ function expandUser(user) {
   };
 }
 
+function expandCard(card) {
+  const customer = db.customers.find((item) => item.id === card.customerId);
+  return {
+    ...card,
+    customerName: customer ? customer.fullName : '',
+  };
+}
+
+function expandSupplier(supplier) {
+  return supplier;
+}
+
+function expandOrder(order) {
+  const customer = db.customers.find((item) => item.id === order.customerId);
+  return {
+    ...order,
+    customerName: customer ? customer.fullName : '',
+  };
+}
+
 const EXPANDERS = {
   parts: expandPart,
   customers: expandCustomer,
   brands: (item) => item,
   categories: (item) => item,
   cars: (item) => item,
+  cards: expandCard,
+  suppliers: expandSupplier,
+  orders: expandOrder,
 };
 
 function searchableText(collection, item) {
@@ -313,6 +371,12 @@ function searchableText(collection, item) {
       return [item.name, item.maker].join(' ');
     case 'customers':
       return [item.fullName, item.email, item.phone].join(' ');
+    case 'cards':
+      return [item.number, String(item.customerId)].join(' ');
+    case 'suppliers':
+      return [item.name, item.country, item.email, item.phone].join(' ');
+    case 'orders':
+      return [String(item.id), item.status, String(item.customerId)].join(' ');
     default:
       return '';
   }
@@ -340,6 +404,24 @@ function applyFilters(collection, rows, q) {
 
   if (collection === 'cars' && q.maker) {
     result = result.filter((item) => item.maker === q.maker);
+  }
+
+  if (collection === 'cards') {
+    if (q.customerId) result = result.filter((item) => item.customerId === Number(q.customerId));
+    if (q.active === 'true') result = result.filter((item) => item.active);
+    if (q.active === 'false') result = result.filter((item) => !item.active);
+    if (q.minDiscount) result = result.filter((item) => item.discountPercent >= Number(q.minDiscount));
+  }
+
+  if (collection === 'suppliers') {
+    if (q.country) result = result.filter((item) => item.country === q.country);
+    if (q.minRating) result = result.filter((item) => item.rating >= Number(q.minRating));
+  }
+
+  if (collection === 'orders') {
+    if (q.customerId) result = result.filter((item) => item.customerId === Number(q.customerId));
+    if (q.status) result = result.filter((item) => item.status === q.status);
+    if (q.minTotal) result = result.filter((item) => item.total >= Number(q.minTotal));
   }
 
   return result;
@@ -478,6 +560,34 @@ function validate(collection, body, id = null) {
     if (!str(body.phone)) e.phone = 'Укажите телефон';
   }
 
+  if (collection === 'cards') {
+    const customer = db.customers.find((item) => item.id === Number(body.customerId) && !item.deletedAt);
+    if (!customer) e.customerId = 'Клиент не найден';
+    else {
+      const dup = db.cards.find(
+        (item) => item.customerId === customer.id && item.id !== id && !item.deletedAt
+      );
+      if (dup) e.customerId = 'У клиента уже есть карта лояльности';
+    }
+    if (!str(body.number)) e.number = 'Укажите номер карты';
+    else if (str(body.number).length > 20) e.number = 'Не длиннее 20 символов';
+    const discount = Number(body.discountPercent);
+    if (!Number.isInteger(discount) || discount < 0 || discount > 50) {
+      e.discountPercent = 'Скидка от 0 до 50 процентов';
+    }
+  }
+
+  if (collection === 'suppliers') {
+    if (!str(body.name)) e.name = 'Укажите название';
+    if (!str(body.country)) e.country = 'Укажите страну';
+    if (!str(body.phone)) e.phone = 'Укажите телефон';
+    if (str(body.email) && !/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(str(body.email))) {
+      e.email = 'Некорректный адрес почты';
+    }
+    const rating = Number(body.rating);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) e.rating = 'Рейтинг от 1 до 5';
+  }
+
   return e;
 }
 
@@ -514,6 +624,22 @@ function normalize(collection, body) {
       };
     case 'customers':
       return { fullName: str(body.fullName), email: str(body.email), phone: str(body.phone) };
+    case 'cards':
+      return {
+        customerId: num(body.customerId),
+        number: str(body.number),
+        issuedAt: body.issuedAt || new Date().toISOString(),
+        discountPercent: num(body.discountPercent) ?? 0,
+        active: body.active !== false,
+      };
+    case 'suppliers':
+      return {
+        name: str(body.name),
+        country: str(body.country),
+        phone: str(body.phone),
+        email: str(body.email),
+        rating: num(body.rating) ?? 3,
+      };
     default:
       return { ...body };
   }
@@ -532,7 +658,130 @@ function conflictOnDelete(collection, id) {
     const count = db.parts.filter((item) => (item.carModelIds || []).includes(id)).length;
     if (count) return `Автомобиль нельзя удалить: на него ссылаются ${count} запчастей.`;
   }
+  if (collection === 'customers') {
+    const orders = db.orders.filter((item) => item.customerId === id && !item.deletedAt).length;
+    if (orders) return `Клиента нельзя удалить: есть ${orders} заказов.`;
+  }
+  if (collection === 'parts') {
+    const used = db.orders.some(
+      (order) =>
+        !order.deletedAt &&
+        order.status !== 'cancelled' &&
+        (order.items || []).some((line) => line.partId === id)
+    );
+    if (used) return 'Запчасть нельзя удалить: она есть в активном заказе.';
+  }
   return null;
+}
+
+function orderTotal(subtotal, discountPercent) {
+  const discount = Math.min(50, Math.max(0, Number(discountPercent) || 0));
+  return Math.round((subtotal * (100 - discount)) / 100);
+}
+
+function restoreOrderStock(order) {
+  if (order.stockRestored || order.status === 'cancelled') return;
+  for (const line of order.items || []) {
+    const part = db.parts.find((item) => item.id === line.partId);
+    if (part) part.stockAvailable += line.quantity;
+  }
+  order.stockRestored = true;
+}
+
+function buildOrderData(body, user, id = null) {
+  const errors = {};
+  let customerId = Number(body.customerId);
+  if (user.role === 'buyer') {
+    customerId = user.customerId;
+    if (!customerId) errors.customerId = 'К учётной записи не привязан клиент';
+  }
+  const customer = db.customers.find((item) => item.id === customerId && !item.deletedAt);
+  if (!customer && !errors.customerId) errors.customerId = 'Клиент не найден';
+
+  const rawItems = Array.isArray(body.items) ? body.items : [];
+  if (!rawItems.length) errors.items = 'Добавьте хотя бы одну позицию';
+
+  const items = [];
+  let subtotal = 0;
+  if (!errors.items) {
+    for (const line of rawItems) {
+      const part = db.parts.find((item) => item.id === Number(line.partId) && !item.deletedAt);
+      const quantity = Number(line.quantity);
+      if (!part) {
+        errors.items = 'Запчасть в заказе не найдена';
+        break;
+      }
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        errors.items = 'Количество в позиции должно быть целым и не меньше 1';
+        break;
+      }
+      const already = items.find((item) => item.partId === part.id);
+      const need = quantity + (already ? already.quantity : 0);
+      const reserved = id
+        ? db.orders
+            .filter((order) => order.id === id && !order.deletedAt && order.status !== 'cancelled')
+            .flatMap((order) => order.items || [])
+            .filter((item) => item.partId === part.id)
+            .reduce((sum, item) => sum + item.quantity, 0)
+        : 0;
+      if (part.stockAvailable + reserved < need) {
+        return { conflict: `Недостаточно «${part.name}»: доступно ${part.stockAvailable}` };
+      }
+      if (already) {
+        already.quantity += quantity;
+      } else {
+        items.push({
+          partId: part.id,
+          name: part.name,
+          sku: part.sku,
+          quantity,
+          unitPrice: part.price,
+        });
+      }
+      subtotal += part.price * quantity;
+    }
+  }
+
+  const card = db.cards.find(
+    (item) => item.customerId === customerId && item.active && !item.deletedAt
+  );
+  const discountPercent = card ? card.discountPercent : 0;
+  let status = ['new', 'paid', 'cancelled'].includes(body.status) ? body.status : 'new';
+  if (user.role === 'buyer') status = 'new';
+
+  if (Object.keys(errors).length) return { errors };
+  return {
+    data: {
+      customerId,
+      status,
+      items,
+      subtotal,
+      discountPercent,
+      total: orderTotal(subtotal, discountPercent),
+      stockRestored: status === 'cancelled',
+    },
+  };
+}
+
+function applyOrderStock(previous, next) {
+  const prevItems = previous && previous.status !== 'cancelled' ? previous.items || [] : [];
+  const nextItems = next.status === 'cancelled' ? [] : next.items || [];
+  const prevQty = new Map();
+  for (const line of prevItems) {
+    prevQty.set(line.partId, (prevQty.get(line.partId) || 0) + line.quantity);
+  }
+  const nextQty = new Map();
+  for (const line of nextItems) {
+    nextQty.set(line.partId, (nextQty.get(line.partId) || 0) + line.quantity);
+  }
+  const ids = new Set([...prevQty.keys(), ...nextQty.keys()]);
+  for (const partId of ids) {
+    const delta = (nextQty.get(partId) || 0) - (prevQty.get(partId) || 0);
+    if (!delta) continue;
+    const part = db.parts.find((item) => item.id === partId);
+    if (!part) continue;
+    part.stockAvailable -= delta;
+  }
 }
 
 function upsertCard(customerId, card) {
@@ -618,7 +867,7 @@ function requireRole(res, user, minRole) {
   return true;
 }
 
-const COLLECTIONS = ['parts', 'brands', 'categories', 'cars', 'customers'];
+const COLLECTIONS = ['parts', 'brands', 'categories', 'cars', 'customers', 'cards', 'suppliers', 'orders'];
 
 async function handle(req, res, url) {
   const q = Object.fromEntries(url.searchParams.entries());
@@ -767,6 +1016,7 @@ async function handle(req, res, url) {
     let deleted = 0;
     for (const row of db[collection]) {
       if (ids.includes(row.id) && !row.deletedAt) {
+        if (collection === 'orders') restoreOrderStock(row);
         row.deletedAt = new Date().toISOString();
         deleted += 1;
       }
@@ -788,12 +1038,26 @@ async function handle(req, res, url) {
       const row = db[collection].find((item) => item.id === id);
       if (!row) return fail(res, 404, 'Объект не найден');
       row.deletedAt = null;
+      if (collection === 'orders' && row.stockRestored && row.status !== 'cancelled') {
+        applyOrderStock(null, row);
+        row.stockRestored = false;
+      }
       return send(res, 200, expand(row));
     }
 
     if (id === null && method === 'GET') {
+      if (!requireRole(res, user, collection === 'suppliers' ? 'manager' : 'buyer')) return;
       let rows = db[collection];
       if (q.includeDeleted !== 'true') rows = rows.filter((item) => !item.deletedAt);
+      if (collection === 'orders' && user.role === 'buyer') {
+        rows = rows.filter((item) => item.customerId === user.customerId);
+      }
+      if (collection === 'cards' && user.role === 'buyer') {
+        rows = rows.filter((item) => item.customerId === user.customerId);
+      }
+      if (collection === 'customers' && user.role === 'buyer') {
+        rows = rows.filter((item) => item.id === user.customerId);
+      }
       rows = applyFilters(collection, rows, q);
       rows = applySort(rows, q.sort);
       const page = paginate(rows, q);
@@ -801,16 +1065,39 @@ async function handle(req, res, url) {
     }
 
     if (id !== null && method === 'GET') {
+      if (!requireRole(res, user, collection === 'suppliers' ? 'manager' : 'buyer')) return;
       const row = db[collection].find((item) => item.id === id && (q.includeDeleted === 'true' || !item.deletedAt));
       if (!row) return fail(res, 404, 'Объект не найден');
+      if (collection === 'orders' && user.role === 'buyer' && row.customerId !== user.customerId) {
+        return fail(res, 403, 'Можно смотреть только свои заказы');
+      }
+      if (collection === 'customers' && user.role === 'buyer' && row.id !== user.customerId) {
+        return fail(res, 403, 'Можно смотреть только свою карточку клиента');
+      }
+      if (collection === 'cards' && user.role === 'buyer' && row.customerId !== user.customerId) {
+        return fail(res, 403, 'Можно смотреть только свою карту лояльности');
+      }
       return send(res, 200, expand(row));
     }
 
     if (id === null && method === 'POST') {
-      if (!requireRole(res, user, 'manager')) return;
       const body = await readBody(req);
       if (!body) return fail(res, 400, 'Тело запроса не является корректным JSON');
 
+      if (collection === 'orders') {
+        if (!user) return fail(res, 401, 'Требуется аутентификация');
+        if (user.role !== 'buyer' && ROLE_LEVEL[user.role] < ROLE_LEVEL.manager) {
+          return fail(res, 403, 'Недостаточно прав для создания заказа');
+        }
+        const built = buildOrderData(body, user);
+        if (built.errors) return send(res, 422, { message: 'Ошибка валидации', errors: built.errors });
+        if (built.conflict) return fail(res, 409, built.conflict);
+        applyOrderStock(null, built.data);
+        const newId = push(collection, built.data);
+        return send(res, 201, expand(db[collection].find((item) => item.id === newId)));
+      }
+
+      if (!requireRole(res, user, 'manager')) return;
       const errors = validate(collection, body);
       if (Object.keys(errors).length) return send(res, 422, { message: 'Ошибка валидации', errors });
 
@@ -825,13 +1112,23 @@ async function handle(req, res, url) {
     }
 
     if (id !== null && (method === 'PUT' || method === 'PATCH')) {
-      if (!requireRole(res, user, 'manager')) return;
       const row = db[collection].find((item) => item.id === id && !item.deletedAt);
       if (!row) return fail(res, 404, 'Объект не найден');
-
       const body = await readBody(req);
       if (!body) return fail(res, 400, 'Тело запроса не является корректным JSON');
 
+      if (collection === 'orders') {
+        if (!requireRole(res, user, 'manager')) return;
+        const merged = method === 'PATCH' ? { ...row, ...body, items: body.items || row.items } : body;
+        const built = buildOrderData(merged, user, id);
+        if (built.errors) return send(res, 422, { message: 'Ошибка валидации', errors: built.errors });
+        if (built.conflict) return fail(res, 409, built.conflict);
+        applyOrderStock(row, built.data);
+        Object.assign(row, built.data);
+        return send(res, 200, expand(row));
+      }
+
+      if (!requireRole(res, user, 'manager')) return;
       const merged = method === 'PATCH' ? { ...row, ...body } : body;
       const errors = validate(collection, merged, id);
       if (Object.keys(errors).length) return send(res, 422, { message: 'Ошибка валидации', errors });
@@ -851,6 +1148,9 @@ async function handle(req, res, url) {
       const conflict = conflictOnDelete(collection, id);
       if (conflict) return fail(res, 409, conflict);
 
+      if (collection === 'orders') {
+        restoreOrderStock(db[collection][index]);
+      }
       if (hard) {
         db[collection].splice(index, 1);
       } else {

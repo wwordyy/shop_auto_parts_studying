@@ -15,6 +15,11 @@ void main() {
       expect(perms.canOpen('/parts'), isTrue);
       expect(perms.canOpen('/parts/new'), isFalse);
       expect(perms.canOpen('/customers'), isFalse);
+      expect(perms.canOpen('/cards'), isFalse);
+      expect(perms.canOpen('/suppliers'), isFalse);
+      expect(perms.canOpen('/orders'), isTrue);
+      expect(perms.canOpen('/orders/new'), isTrue);
+      expect(perms.canOpen('/orders/1/edit'), isFalse);
       expect(perms.canOpen('/admin/users'), isFalse);
     });
 
@@ -30,6 +35,9 @@ void main() {
       expect(perms.canManageUsers, isFalse);
       expect(perms.canAccessCabinet, isFalse);
       expect(perms.canOpen('/customers/new'), isTrue);
+      expect(perms.canOpen('/cards'), isTrue);
+      expect(perms.canOpen('/suppliers'), isTrue);
+      expect(perms.canOpen('/orders/1/edit'), isTrue);
       expect(perms.canOpen('/admin/stats'), isFalse);
       expect(perms.canOpen('/cabinet'), isFalse);
     });
@@ -45,6 +53,10 @@ void main() {
       expect(perms.canOpen('/admin/users'), isTrue);
       expect(perms.canOpen('/admin/stats'), isTrue);
       expect(perms.canOpen('/parts/1/edit'), isTrue);
+      expect(perms.canOpen('/suppliers'), isTrue);
+      expect(perms.canOpen('/cards'), isFalse);
+      expect(perms.canOpen('/customers'), isFalse);
+      expect(perms.canOpen('/orders'), isTrue);
     });
 
     test('покупатель не открывает чужие адреса', () {

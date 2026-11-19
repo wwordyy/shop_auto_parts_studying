@@ -62,12 +62,39 @@ class AppShell extends StatelessWidget {
       ),
     ),
     _Tab(
+      path: '/orders',
+      visible: _orders,
+      destination: NavigationDestination(
+        icon: Icon(Icons.receipt_long_outlined),
+        selectedIcon: Icon(Icons.receipt_long),
+        label: 'Заказы',
+      ),
+    ),
+    _Tab(
       path: '/customers',
       visible: _customers,
       destination: NavigationDestination(
         icon: Icon(Icons.people_outline),
         selectedIcon: Icon(Icons.people),
         label: 'Клиенты',
+      ),
+    ),
+    _Tab(
+      path: '/cards',
+      visible: _cards,
+      destination: NavigationDestination(
+        icon: Icon(Icons.loyalty_outlined),
+        selectedIcon: Icon(Icons.loyalty),
+        label: 'Карты',
+      ),
+    ),
+    _Tab(
+      path: '/suppliers',
+      visible: _suppliers,
+      destination: NavigationDestination(
+        icon: Icon(Icons.local_shipping_outlined),
+        selectedIcon: Icon(Icons.local_shipping),
+        label: 'Поставщики',
       ),
     ),
     _Tab(
@@ -100,7 +127,10 @@ class AppShell extends StatelessWidget {
   ];
 
   static bool _catalog(Permissions perms) => perms.canViewCatalog;
+  static bool _orders(Permissions perms) => perms.canAccessOrders;
   static bool _customers(Permissions perms) => perms.canAccessCustomers;
+  static bool _cards(Permissions perms) => perms.canAccessCards;
+  static bool _suppliers(Permissions perms) => perms.canAccessSuppliers;
   static bool _cabinet(Permissions perms) => perms.canAccessCabinet;
   static bool _users(Permissions perms) => perms.canManageUsers;
   static bool _stats(Permissions perms) => perms.canViewStats;

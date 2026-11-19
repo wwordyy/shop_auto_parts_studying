@@ -9,13 +9,19 @@ import 'core/connectivity_monitor.dart';
 import 'repositories/api_brand_repository.dart';
 import 'repositories/api_car_model_repository.dart';
 import 'repositories/api_category_repository.dart';
+import 'repositories/api_card_repository.dart';
 import 'repositories/api_customer_repository.dart';
+import 'repositories/api_order_repository.dart';
 import 'repositories/api_part_repository.dart';
+import 'repositories/api_supplier_repository.dart';
 import 'repositories/brand_repository.dart';
+import 'repositories/card_repository.dart';
 import 'repositories/car_model_repository.dart';
 import 'repositories/category_repository.dart';
 import 'repositories/customer_repository.dart';
+import 'repositories/order_repository.dart';
 import 'repositories/part_repository.dart';
+import 'repositories/supplier_repository.dart';
 import 'state/auth_notifier.dart';
 import 'state/list_notifier.dart';
 import 'widgets/connectivity_host.dart';
@@ -58,6 +64,11 @@ class _ShopAppState extends State<ShopApp> {
             create: (_) => ApiCarModelRepository(widget.dio)),
         Provider<CustomerRepository>(
             create: (_) => ApiCustomerRepository(widget.dio)),
+        Provider<CardRepository>(create: (_) => ApiCardRepository(widget.dio)),
+        Provider<SupplierRepository>(
+            create: (_) => ApiSupplierRepository(widget.dio)),
+        Provider<OrderRepository>(
+            create: (_) => ApiOrderRepository(widget.dio)),
         ChangeNotifierProvider(
           create: (context) => PartListNotifier(context.read<PartRepository>()),
         ),
@@ -76,6 +87,17 @@ class _ShopAppState extends State<ShopApp> {
         ChangeNotifierProvider(
           create: (context) =>
               CustomerListNotifier(context.read<CustomerRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => CardListNotifier(context.read<CardRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              SupplierListNotifier(context.read<SupplierRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              OrderListNotifier(context.read<OrderRepository>()),
         ),
       ],
       child: MaterialApp.router(

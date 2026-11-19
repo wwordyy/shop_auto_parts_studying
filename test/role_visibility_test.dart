@@ -52,6 +52,13 @@ Widget _shell(AuthNotifier auth) {
                   path: '/customers',
                   builder: (_, __) => const SizedBox.shrink()),
               GoRoute(
+                  path: '/orders', builder: (_, __) => const SizedBox.shrink()),
+              GoRoute(
+                  path: '/cards', builder: (_, __) => const SizedBox.shrink()),
+              GoRoute(
+                  path: '/suppliers',
+                  builder: (_, __) => const SizedBox.shrink()),
+              GoRoute(
                   path: '/cabinet',
                   builder: (_, __) => const SizedBox.shrink()),
               GoRoute(
@@ -82,7 +89,10 @@ void main() {
 
     expect(find.text('Кабинет'), findsWidgets);
     expect(find.text('Запчасти'), findsWidgets);
+    expect(find.text('Заказы'), findsWidgets);
     expect(find.text('Клиенты'), findsNothing);
+    expect(find.text('Карты'), findsNothing);
+    expect(find.text('Поставщики'), findsNothing);
     expect(find.text('Пользователи'), findsNothing);
     expect(find.text('Статистика'), findsNothing);
     expect(find.byType(NavigationBar), findsOneWidget);
