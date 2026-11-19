@@ -31,7 +31,7 @@ jobs:
         run: |
           API_URL="${{ vars.API_BASE_URL }}"
           if [ -z "$API_URL" ]; then
-            API_URL="http://127.0.0.1:8080/api"
+            API_URL="https://shop-auto-parts-studying.onrender.com/api"
           fi
           flutter build web --release \
             --base-href "/${{ github.event.repository.name }}/" \
